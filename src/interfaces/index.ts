@@ -1,1 +1,1 @@
-export * from "./TransactionLock"
+export * from "./TransactionLock";

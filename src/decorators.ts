@@ -1,6 +1,6 @@
 import { TransactionalKeys } from "./constants";
 import { metadata } from "@decaf-ts/reflection";
-import {Transaction} from "./Transaction";
+import { Transaction } from "./Transaction";
 /**
  * @summary gets the transactions reflections key
  * @function getRepoKey
@@ -26,11 +26,15 @@ export function transactionalPromise(...data: any[]) {
     propertyKey: string,
     descriptor: PropertyDescriptor,
   ) {
-    metadata(getTransactionalKey(TransactionalKeys.TRANSACTIONAL), data)(target, propertyKey);
+    metadata(getTransactionalKey(TransactionalKeys.TRANSACTIONAL), data)(
+      target,
+      propertyKey,
+    );
 
     const originalMethod = descriptor.value;
 
     const methodWrapper = function (this: any, ...args: any[]): Promise<any> {
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this;
       return new Promise<any>((resolve, reject) => {
         const cb = (err?: Error, result?: any) => {
@@ -180,7 +184,7 @@ export function transactionalPromise(...data: any[]) {
  *
  * @memberOf module:db-decorators.Transaction
  */
-export function transactionalSuperCall(method: Function, ...args: any) {
+export function transactionalSuperCall(method: any, ...args: any) {
   const lock = Transaction.getLock();
   const currentTransaction = lock.currentTransaction;
   method(currentTransaction, ...args);

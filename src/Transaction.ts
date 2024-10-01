@@ -10,13 +10,16 @@
  *
  * @category Transactions
  */
-import {TransactionLock} from "./interfaces/TransactionLock";
-import {getAllProperties, getClassDecorators} from "@decaf-ts/reflection";
-import {Callback} from "./types";
-import {SyncronousLock} from "./locks/SyncronousLock";
-import {DBKeys, getAllPropertyDecoratorsRecursive} from "@decaf-ts/db-decorators";
-import {getObjectName} from "./utils";
-import {TransactionalKeys} from "./constants";
+import { TransactionLock } from "./interfaces/TransactionLock";
+import { getAllProperties, getClassDecorators } from "@decaf-ts/reflection";
+import { Callback } from "./types";
+import { SyncronousLock } from "./locks/SyncronousLock";
+import {
+  DBKeys,
+  getAllPropertyDecoratorsRecursive,
+} from "@decaf-ts/db-decorators";
+import { getObjectName } from "./utils";
+import { TransactionalKeys } from "./constants";
 
 export class Transaction {
   readonly id: number;
@@ -60,7 +63,7 @@ export class Transaction {
     const cb = (err?: Error, ...args: any[]) => {
       this.getLock()
         .release(err)
-        .then((_) => callback(err, ...args));
+        .then(() => callback(err, ...args));
     };
     const transaction: Transaction = new Transaction(
       issuer.constructor.name,
@@ -142,6 +145,7 @@ export class Transaction {
       TransactionalKeys.REFLECT,
     );
     if (!transactionalMethods) return obj;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
     const boundObj = getAllProperties(obj).reduce((accum: any, k: string) => {
