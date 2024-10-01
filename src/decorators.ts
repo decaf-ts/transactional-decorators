@@ -20,7 +20,7 @@ export const getTransactionalKey = (key: string) =>
  *
  * @memberOf module:db-decorators.Decorators.transactions
  */
-export function transactionalPromise(...data: any[]) {
+export function transactional(...data: any[]) {
   return function (
     target: any,
     propertyKey: string,

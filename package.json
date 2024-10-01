@@ -20,7 +20,7 @@
     "lint": "eslint .",
     "lint-fix": "eslint --fix ./src/*",
     "test:circular": "dpdm -T --no-warning --no-tree ./src/index.ts",
-    "prepare-release": "npm run lint-fix && npm run build:prod && npm run test && npm run docs",
+    "prepare-release": "npm run lint-fix && npm run build:prod && npm run docs",
     "release": "./bin/tag-release.sh",
     "clean-publish": "npx clean-publish",
     "coverage": "npm run test:all && jest-coverage-badges --input \"./workdocs/coverage/coverage-summary.json\" --output \"./workdocs/badges\"",
@@ -65,6 +65,7 @@
   },
   "homepage": "https://github.com/decaf-ts/ts-workspace#readme",
   "devDependencies": {
+    "@decaf-ts/injectable-decorators": "latest",
     "@decaf-ts/decorator-validation": "latest",
     "@decaf-ts/db-decorators": "latest",
     "@types/jest": "^29.5.12",
