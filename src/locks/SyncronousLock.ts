@@ -1,5 +1,3 @@
-import { Transaction } from "../Lock";
-
 /**
  * @summary Simple Synchronous Lock implementation
  * @description for transaction management
@@ -13,20 +11,23 @@ import { Transaction } from "../Lock";
  * @implements TransactionLock
  *
  * @category Transactions
- */
+ */ import { Transaction } from "../Transaction";
+import { TransactionLock } from "../interfaces/TransactionLock";
+import { Lock } from "./Lock";
+
 export class SyncronousLock implements TransactionLock {
   private counter: number;
   private pendingTransactions: Transaction[];
   currentTransaction?: Transaction = undefined;
   private readonly onBegin?: () => Promise<void>;
-  private readonly onEnd?: (err?: Err) => Promise<void>;
+  private readonly onEnd?: (err?: Error) => Promise<void>;
 
   private readonly lock = new Lock();
 
   constructor(
     counter: number = 1,
     onBegin?: () => Promise<void>,
-    onEnd?: (err?: Err) => Promise<void>,
+    onEnd?: (err?: Error) => Promise<void>,
   ) {
     this.counter = counter;
     this.pendingTransactions = [];
@@ -39,25 +40,24 @@ export class SyncronousLock implements TransactionLock {
    * @param {Transaction} transaction
    */
   submit(transaction: Transaction): void {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
-    self.lock.acquire(self.submit.name).then((_) => {
+    self.lock.acquire().then(() => {
       if (
         self.currentTransaction &&
         self.currentTransaction.id === transaction.id
       ) {
-        self.lock.release(self.submit.name);
-        all(`Continuing transaction {0}`, transaction.id);
+        self.lock.release();
         return transaction.fire();
       }
 
       if (self.counter > 0) {
         self.counter--;
-        self.lock.release(self.submit.name);
+        self.lock.release();
         return self.fireTransaction(transaction);
       } else {
-        all(`Locking transaction {0}`, transaction.id);
         self.pendingTransactions.push(transaction);
-        self.lock.release(self.submit.name);
+        self.lock.release();
       }
     });
   }
@@ -69,39 +69,28 @@ export class SyncronousLock implements TransactionLock {
    * @private
    */
   private fireTransaction(transaction: Transaction) {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
-    self.lock.acquire(self.fireTransaction.name).then((_) => {
+    self.lock.acquire().then(() => {
       self.currentTransaction = transaction;
-      self.lock.release(self.fireTransaction.name);
+      self.lock.release();
       if (self.onBegin)
-        self
-          .onBegin()
-          .then((_) =>
-            all.call(
-              self,
-              `Called onBegin before firing transaction {0}`,
-              transaction.id,
-            ),
-          )
-          .catch((e: any) =>
-            error.call(self, "Failed to run transaction onBegin: {0}", e),
-          )
-          .then((_) => {
-            all.call(
-              self,
-              `Firing transaction {0}. {1} remaining...`,
-              transaction.id,
-              this.pendingTransactions.length,
-            );
-            transaction.fire();
-          });
+        self.onBegin().then(() => {
+          // all.call(
+          //   self,
+          //   `Firing transaction {0}. {1} remaining...`,
+          //   transaction.id,
+          //   this.pendingTransactions.length,
+          // );
+          transaction.fire();
+        });
       else {
-        all.call(
-          self,
-          `Firing transaction {0}. {1} remaining...`,
-          transaction.id,
-          this.pendingTransactions.length,
-        );
+        // all.call(
+        //   self,
+        //   `Firing transaction {0}. {1} remaining...`,
+        //   transaction.id,
+        //   this.pendingTransactions.length,
+        // );
         transaction.fire();
       }
     });
@@ -109,35 +98,35 @@ export class SyncronousLock implements TransactionLock {
   /**
    * @summary Releases The lock after the conclusion of a transaction
    */
-  async release(err?: Err): Promise<void> {
+  async release(err?: Error): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     return new Promise<void>((resolve) => {
-      self.lock.acquire(self.release.name).then((_) => {
+      self.lock.acquire().then(() => {
         if (!self.currentTransaction)
-          warn.call(
-            self,
+          console.warn(
             "Trying to release an unexisting transaction. should never happen...",
           );
-        debug.call(
-          self,
-          "Releasing transaction: {0}",
-          self.currentTransaction?.toString(true, true),
-        );
+        // debug.call(
+        //   self,
+        //   "Releasing transaction: {0}",
+        //   self.currentTransaction?.toString(true, true),
+        // );
         self.currentTransaction = undefined;
-        self.lock.release(self.release.name);
+        self.lock.release();
 
         const afterConclusionCB = () => {
-          self.lock.acquire(self.release.name).then((_) => {
+          self.lock.acquire().then(() => {
             if (self.pendingTransactions.length > 0) {
               const transaction =
                 self.pendingTransactions.shift() as Transaction;
 
-              const cb = () => self.fireTransaction.call(self, transaction);
-
-              all(
-                `Releasing Transaction Lock on transaction {0}`,
-                transaction.id,
-              );
+              const cb = () => self.fireTransaction(transaction);
+              //
+              // all(
+              //   `Releasing Transaction Lock on transaction {0}`,
+              //   transaction.id,
+              // );
 
               if (
                 typeof (globalThis as unknown as { window: any }).window ===
@@ -148,19 +137,12 @@ export class SyncronousLock implements TransactionLock {
             } else {
               self.counter++;
             }
-            self.lock.release(self.release.name);
+            self.lock.release();
             resolve();
           });
         };
 
-        if (self.onEnd)
-          self
-            .onEnd(err)
-            .then((_) => all(`Called onEnd before releasing transaction`))
-            .catch((e: any) =>
-              error.call(self, "Failed to run transaction onEnd: {0}", e),
-            )
-            .then((_) => afterConclusionCB());
+        if (self.onEnd) self.onEnd(err).then(() => afterConclusionCB());
         else afterConclusionCB();
       });
     });

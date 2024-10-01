@@ -10,6 +10,14 @@
  *
  * @category Transactions
  */
+import {TransactionLock} from "./interfaces/TransactionLock";
+import {getAllProperties, getClassDecorators} from "@decaf-ts/reflection";
+import {Callback} from "./types";
+import {SyncronousLock} from "./locks/SyncronousLock";
+import {DBKeys, getAllPropertyDecoratorsRecursive} from "@decaf-ts/db-decorators";
+import {getObjectName} from "./utils";
+import {TransactionalKeys} from "./constants";
+
 export class Transaction {
   readonly id: number;
   protected action?: () => any;
@@ -48,8 +56,8 @@ export class Transaction {
   ) {
     const callback: Callback = args.pop();
     if (!callback || typeof callback !== "function")
-      throw new CriticalError("Missing callback", Transaction);
-    const cb = (err: Err, ...args: any[]) => {
+      throw new Error("Missing callback");
+    const cb = (err?: Error, ...args: any[]) => {
       this.getLock()
         .release(err)
         .then((_) => callback(err, ...args));
@@ -96,7 +104,7 @@ export class Transaction {
    * @summary releases the lock
    * @param {Err} err
    */
-  static async release(err?: Err) {
+  static async release(err?: Error) {
     return this.getLock().release(err);
   }
 
@@ -112,7 +120,7 @@ export class Transaction {
    * @param {Transaction} nextTransaction
    */
   bindTransaction(nextTransaction: Transaction) {
-    all(`Binding the {0} to {1}`, nextTransaction, this);
+    // all(`Binding the {0} to {1}`, nextTransaction, this);
     this.log.push(...nextTransaction.log);
     nextTransaction.bindTransaction = this.bindToTransaction.bind(this);
     nextTransaction.bindToTransaction = this.bindToTransaction.bind(this);
@@ -131,7 +139,7 @@ export class Transaction {
     const transactionalMethods = getAllPropertyDecoratorsRecursive(
       obj,
       undefined,
-      RepositoryKeys.REFLECT,
+      TransactionalKeys.REFLECT,
     );
     if (!transactionalMethods) return obj;
     const self = this;
@@ -140,7 +148,7 @@ export class Transaction {
       if (
         Object.keys(transactionalMethods).indexOf(k) !== -1 &&
         transactionalMethods[k].find(
-          (o) => o.key === RepositoryKeys.TRANSACTIONAL,
+          (o) => o.key === TransactionalKeys.TRANSACTIONAL,
         )
       )
         accum[k] = (...args: any[]) =>
@@ -149,8 +157,8 @@ export class Transaction {
       else if (typeof obj[k] === "function")
         accum[k] = obj[k].bind(obj.__originalObj || obj);
       else if (typeof obj[k] === "object" && obj[k].constructor) {
-        const decs = getClassDecorators(RepositoryKeys.REFLECT, obj[k]);
-        if (decs.find((e) => e.key === RepositoryKeys.TRANSACTIONAL))
+        const decs = getClassDecorators(TransactionalKeys.REFLECT, obj[k]);
+        if (decs.find((e) => e.key === TransactionalKeys.TRANSACTIONAL))
           accum[k] = self.bindToTransaction(obj[k]);
         else accum[k] = obj[k];
       } else accum[k] = obj[k];
@@ -171,7 +179,7 @@ export class Transaction {
    * @summary Fires the Transaction
    */
   fire() {
-    if (!this.action) throw new CriticalError(`Missing the method`);
+    if (!this.action) throw new Error(`Missing the method`);
     return this.action();
   }
 

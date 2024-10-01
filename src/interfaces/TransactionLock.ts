@@ -1,4 +1,4 @@
-import { Transaction } from "../Lock";
+import {Transaction} from "../Transaction";
 
 /**
  * @summary Transaction lock interface
