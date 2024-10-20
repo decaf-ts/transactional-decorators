@@ -1,8 +1,13 @@
-import {constructFromObject, minlength} from "@decaf-ts/decorator-validation";
-import {DBModel, DBOperations, readonly, timestamp, id} from "@decaf-ts/db-decorators";
+import {
+  minlength,
+  model,
+  Model,
+  ModelArg,
+} from "@decaf-ts/decorator-validation";
+import { DBOperations, readonly, timestamp, id } from "@decaf-ts/db-decorators";
 
-export class TestModelAsync extends DBModel {
-
+@model()
+export class TestModelAsync extends Model {
   @id()
   id?: string | number = undefined;
 
@@ -19,20 +24,18 @@ export class TestModelAsync extends DBModel {
   @readonly()
   createdOn?: Date = undefined;
 
-  public constructor(testModel?: TestModelAsync | {}){
+  public constructor(testModel?: ModelArg<TestModelAsync>) {
     super();
-    constructFromObject(this, testModel);
+    Model.fromObject(this, testModel);
   }
 }
 
-
-export class InheritanceTestModel extends TestModelAsync{
-  public constructor(testModel?: TestModelAsync | {}){
+@model()
+export class InheritanceTestModel extends TestModelAsync {
+  public constructor(testModel?: ModelArg<InheritanceTestModel>) {
     super(testModel);
-    constructFromObject(this, testModel);
-    if (this.updatedOn)
-      this.updatedOn = new Date(this.updatedOn);
-    if (this.createdOn)
-      this.createdOn = new Date(this.createdOn);
+    Model.fromObject(this, testModel);
+    if (this.updatedOn) this.updatedOn = new Date(this.updatedOn);
+    if (this.createdOn) this.createdOn = new Date(this.createdOn);
   }
 }

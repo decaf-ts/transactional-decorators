@@ -35,7 +35,7 @@ export class Transaction {
     source: string,
     method?: string,
     action?: () => any,
-    metadata?: any[],
+    metadata?: any[]
   ) {
     this.id = Date.now();
     this.action = action;
@@ -72,9 +72,9 @@ export class Transaction {
         return callbackMethod.call(
           transaction.bindToTransaction(issuer),
           ...args,
-          cb,
+          cb
         );
-      },
+      }
     );
     this.getLock().submit(transaction);
   }
@@ -142,7 +142,7 @@ export class Transaction {
     const transactionalMethods = getAllPropertyDecoratorsRecursive(
       obj,
       undefined,
-      TransactionalKeys.REFLECT,
+      TransactionalKeys.REFLECT
     );
     if (!transactionalMethods) return obj;
     // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -152,7 +152,7 @@ export class Transaction {
       if (
         Object.keys(transactionalMethods).indexOf(k) !== -1 &&
         transactionalMethods[k].find(
-          (o) => o.key === TransactionalKeys.TRANSACTIONAL,
+          (o) => o.key === TransactionalKeys.TRANSACTIONAL
         )
       )
         accum[k] = (...args: any[]) =>
@@ -196,5 +196,15 @@ export class Transaction {
     return `${withId ? `[${this.id}]` : ""}[Transaction][${this.source}.${this.method}${
       withLog ? `]\nTransaction Log:\n${this.log.join("\n")}` : "]"
     }`;
+  }
+
+  /**
+   * @summary gets the transactions reflections key
+   * @function getRepoKey
+   * @param {string} key
+   * @memberOf module:db-decorators.Transactions
+   * */
+  static key(key: string) {
+    return TransactionalKeys.REFLECT + key;
   }
 }

@@ -1,15 +1,6 @@
 import { TransactionalKeys } from "./constants";
 import { metadata } from "@decaf-ts/reflection";
 import { Transaction } from "./Transaction";
-/**
- * @summary gets the transactions reflections key
- * @function getRepoKey
- * @param {string} key
- * @memberOf module:db-decorators.Transactions
- * */
-
-export const getTransactionalKey = (key: string) =>
-  TransactionalKeys.REFLECT + key;
 
 /**
  * @summary Sets a class Async (promise based) method as transactional
@@ -24,11 +15,11 @@ export function transactional(...data: any[]) {
   return function (
     target: any,
     propertyKey: string,
-    descriptor: PropertyDescriptor,
+    descriptor: PropertyDescriptor
   ) {
-    metadata(getTransactionalKey(TransactionalKeys.TRANSACTIONAL), data)(
+    metadata(Transaction.key(TransactionalKeys.TRANSACTIONAL), data)(
       target,
-      propertyKey,
+      propertyKey
     );
 
     const originalMethod = descriptor.value;
@@ -55,7 +46,7 @@ export function transactional(...data: any[]) {
                 .then(resolve)
                 .catch(reject);
             },
-            data.length ? data : undefined,
+            data.length ? data : undefined
           );
 
           transaction.bindTransaction(updatedTransaction);
@@ -72,7 +63,7 @@ export function transactional(...data: any[]) {
                 .then((result: any) => cb(undefined, result))
                 .catch(cb);
             },
-            data.length ? data : undefined,
+            data.length ? data : undefined
           );
           Transaction.submit(transaction);
         }
