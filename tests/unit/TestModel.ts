@@ -25,8 +25,7 @@ export class TestModelAsync extends Model {
   createdOn?: Date = undefined;
 
   public constructor(testModel?: ModelArg<TestModelAsync>) {
-    super();
-    Model.fromObject(this, testModel);
+    super(testModel);
   }
 }
 
@@ -34,8 +33,5 @@ export class TestModelAsync extends Model {
 export class InheritanceTestModel extends TestModelAsync {
   public constructor(testModel?: ModelArg<InheritanceTestModel>) {
     super(testModel);
-    Model.fromObject(this, testModel);
-    if (this.updatedOn) this.updatedOn = new Date(this.updatedOn);
-    if (this.createdOn) this.createdOn = new Date(this.createdOn);
   }
 }

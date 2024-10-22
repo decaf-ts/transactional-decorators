@@ -3,11 +3,11 @@ import { metadata } from "@decaf-ts/reflection";
 import { Transaction } from "./Transaction";
 
 /**
- * @summary Sets a class Async (promise based) method as transactional
+ * @summary Sets a class Async method as transactional
  *
  * @param {any[]}  [data] option metadata available to the {@link TransactionLock}
  *
- * @function transactionalPromise
+ * @function transactional
  *
  * @memberOf module:db-decorators.Decorators.transactions
  */
@@ -53,7 +53,6 @@ export function transactional(...data: any[]) {
           transaction.fire();
         } else {
           args.unshift(transaction);
-          transaction = undefined;
           transaction = new Transaction(
             this.constructor.name,
             propertyKey,
@@ -178,5 +177,5 @@ export function transactional(...data: any[]) {
 export function transactionalSuperCall(method: any, ...args: any) {
   const lock = Transaction.getLock();
   const currentTransaction = lock.currentTransaction;
-  method(currentTransaction, ...args);
+  return method(currentTransaction, ...args);
 }
