@@ -1,6 +1,7 @@
 import { TransactionalKeys } from "./constants";
 import { metadata } from "@decaf-ts/reflection";
 import { Transaction } from "./Transaction";
+import { InternalError } from "@decaf-ts/db-decorators";
 
 /**
  * @summary Sets a class Async method as transactional
@@ -14,9 +15,11 @@ import { Transaction } from "./Transaction";
 export function transactional(...data: any[]) {
   return function (
     target: any,
-    propertyKey: string,
-    descriptor: PropertyDescriptor
+    propertyKey?: any,
+    descriptor?: PropertyDescriptor
   ) {
+    if (!descriptor)
+      throw new InternalError("Missing descriptor. Should be impossible");
     metadata(Transaction.key(TransactionalKeys.TRANSACTIONAL), data)(
       target,
       propertyKey

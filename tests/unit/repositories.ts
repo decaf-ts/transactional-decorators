@@ -2,15 +2,8 @@ import { Callback, transactionalSuperCall } from "../../src";
 import { TestModelAsync } from "./TestModel";
 import { transactional } from "../../src";
 import { RamRepository } from "./RamRespository";
-import { sf, Model, model, Constructor } from "@decaf-ts/decorator-validation";
-import {
-  DataCache,
-  findModelId,
-  IRepository,
-  Repository,
-} from "@decaf-ts/db-decorators";
-
-type ModelCallback<M> = (err?: any, model?: M) => void;
+import { Model } from "@decaf-ts/decorator-validation";
+import { Repository } from "@decaf-ts/db-decorators";
 
 export class TransactionalRepository extends RamRepository<TestModelAsync> {
   private readonly timeout: number;
