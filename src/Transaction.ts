@@ -11,7 +11,7 @@
  * @category Transactions
  */
 import { TransactionLock } from "./interfaces/TransactionLock";
-import { getAllProperties, getClassDecorators } from "@decaf-ts/reflection";
+import { Reflection } from "@decaf-ts/reflection";
 import { Callback } from "./types";
 import { SyncronousLock } from "./locks/SyncronousLock";
 import {
@@ -148,27 +148,33 @@ export class Transaction {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
-    const boundObj = getAllProperties(obj).reduce((accum: any, k: string) => {
-      if (
-        Object.keys(transactionalMethods).indexOf(k) !== -1 &&
-        transactionalMethods[k].find(
-          (o) => o.key === TransactionalKeys.TRANSACTIONAL
+    const boundObj = Reflection.getAllProperties(obj).reduce(
+      (accum: any, k: string) => {
+        if (
+          Object.keys(transactionalMethods).indexOf(k) !== -1 &&
+          transactionalMethods[k].find(
+            (o) => o.key === TransactionalKeys.TRANSACTIONAL
+          )
         )
-      )
-        accum[k] = (...args: any[]) =>
-          obj[k].call(obj.__originalObj || obj, self, ...args);
-      else if (k === "clazz" || k === "constructor") accum[k] = obj[k];
-      else if (typeof obj[k] === "function")
-        accum[k] = obj[k].bind(obj.__originalObj || obj);
-      else if (typeof obj[k] === "object" && obj[k].constructor) {
-        const decs = getClassDecorators(TransactionalKeys.REFLECT, obj[k]);
-        if (decs.find((e) => e.key === TransactionalKeys.TRANSACTIONAL))
-          accum[k] = self.bindToTransaction(obj[k]);
-        else accum[k] = obj[k];
-      } else accum[k] = obj[k];
+          accum[k] = (...args: any[]) =>
+            obj[k].call(obj.__originalObj || obj, self, ...args);
+        else if (k === "clazz" || k === "constructor") accum[k] = obj[k];
+        else if (typeof obj[k] === "function")
+          accum[k] = obj[k].bind(obj.__originalObj || obj);
+        else if (typeof obj[k] === "object" && obj[k].constructor) {
+          const decs = Reflection.getClassDecorators(
+            TransactionalKeys.REFLECT,
+            obj[k]
+          );
+          if (decs.find((e: any) => e.key === TransactionalKeys.TRANSACTIONAL))
+            accum[k] = self.bindToTransaction(obj[k]);
+          else accum[k] = obj[k];
+        } else accum[k] = obj[k];
 
-      return accum;
-    }, {});
+        return accum;
+      },
+      {}
+    );
 
     boundObj[DBKeys.ORIGINAL] = obj[DBKeys.ORIGINAL] || obj;
     boundObj.toString = () =>
