@@ -61,7 +61,7 @@ export class Transaction {
     if (!callback || typeof callback !== "function")
       throw new Error("Missing callback");
     const cb = (err?: Error, ...args: any[]) => {
-      this.getLock()
+      Transaction.getLock()
         .release(err)
         .then(() => callback(err, ...args));
     };
@@ -76,7 +76,7 @@ export class Transaction {
         );
       }
     );
-    this.getLock().submit(transaction);
+    Transaction.getLock().submit(transaction);
   }
 
   /**
@@ -100,7 +100,7 @@ export class Transaction {
    * @param {Transaction} transaction
    */
   static submit(transaction: Transaction) {
-    this.getLock().submit(transaction);
+    Transaction.getLock().submit(transaction);
   }
 
   /**
@@ -108,7 +108,7 @@ export class Transaction {
    * @param {Err} err
    */
   static async release(err?: Error) {
-    return this.getLock().release(err);
+    return Transaction.getLock().release(err);
   }
 
   /**
