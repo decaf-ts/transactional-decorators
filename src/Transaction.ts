@@ -1,3 +1,14 @@
+import { TransactionLock } from "./interfaces/TransactionLock";
+import { Reflection } from "@decaf-ts/reflection";
+import { Callback } from "./types";
+import { SyncronousLock } from "./locks/SyncronousLock";
+import {
+  DBKeys,
+  getAllPropertyDecoratorsRecursive,
+} from "@decaf-ts/db-decorators";
+import { getObjectName } from "./utils";
+import { TransactionalKeys } from "./constants";
+
 /**
  * @summary Transaction Class
  *
@@ -10,17 +21,6 @@
  *
  * @category Transactions
  */
-import { TransactionLock } from "./interfaces/TransactionLock";
-import { Reflection } from "@decaf-ts/reflection";
-import { Callback } from "./types";
-import { SyncronousLock } from "./locks/SyncronousLock";
-import {
-  DBKeys,
-  getAllPropertyDecoratorsRecursive,
-} from "@decaf-ts/db-decorators";
-import { getObjectName } from "./utils";
-import { TransactionalKeys } from "./constants";
-
 export class Transaction {
   readonly id: number;
   protected action?: () => any;
