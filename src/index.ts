@@ -8,13 +8,13 @@ export * from "./types";
 /**
  * @summary Module summary
  * @description Module description
- * @module trasactions
+ * @module transactions
  */
 
 /**
  * @summary stores the current package version
  * @description this is how you should document a constant
  * @const VERSION
- * @memberOf module:ts-workspace
+ * @memberOf module:transactions
  */
 export const VERSION = "##VERSION##";
