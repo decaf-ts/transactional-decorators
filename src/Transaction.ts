@@ -18,8 +18,6 @@ import { TransactionalKeys } from "./constants";
  * @param {any[]} [metadata]
  *
  * @class Transaction
- *
- * @category Transactions
  */
 export class Transaction {
   readonly id: number;

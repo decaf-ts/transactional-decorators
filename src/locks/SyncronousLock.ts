@@ -9,8 +9,6 @@
  *
  * @class SyncronousLock
  * @implements TransactionLock
- *
- * @category Transactions
  */ import { Transaction } from "../Transaction";
 import { TransactionLock } from "../interfaces/TransactionLock";
 import { Lock } from "./Lock";
@@ -27,7 +25,7 @@ export class SyncronousLock implements TransactionLock {
   constructor(
     counter: number = 1,
     onBegin?: () => Promise<void>,
-    onEnd?: (err?: Error) => Promise<void>,
+    onEnd?: (err?: Error) => Promise<void>
   ) {
     this.counter = counter;
     this.pendingTransactions = [];
@@ -105,7 +103,7 @@ export class SyncronousLock implements TransactionLock {
       self.lock.acquire().then(() => {
         if (!self.currentTransaction)
           console.warn(
-            "Trying to release an unexisting transaction. should never happen...",
+            "Trying to release an unexisting transaction. should never happen..."
           );
         // debug.call(
         //   self,

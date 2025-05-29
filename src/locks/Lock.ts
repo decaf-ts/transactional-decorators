@@ -1,11 +1,5 @@
 import { LockCallable } from "../types";
 
-/**
- * @summary Simple Promise based Lock class
- *
- * @class Lock
- * @category Transactions
- */
 export class Lock {
   private queue: LockCallable[] = [];
   private locked = false;

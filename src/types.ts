@@ -1,7 +1,7 @@
 /**
  * @summary defines a callable as perceived by the lock
  *
- * @memberOf module:db-decorators.Transactions
+ * @memberOf module:db-decorators
  */
 export type LockCallable = (value?: void | PromiseLike<void>) => void;
 

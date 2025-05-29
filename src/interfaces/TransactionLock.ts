@@ -1,11 +1,5 @@
 import { Transaction } from "../Transaction";
 
-/**
- * @summary Transaction lock interface
- * @interface TransactionLock
- *
- * @category Transactions
- */
 export interface TransactionLock {
   /**
    * @summary stores the current transactions
@@ -21,7 +15,7 @@ export interface TransactionLock {
 
   /**
    * @summary Releases The lock after the conclusion of a transaction
-   * @param {Err} [err] the error (if any) that caused the release
+   * @param {Error} [err] the error (if any) that caused the release
    * @method
    */
   release(err?: Error): Promise<void>;

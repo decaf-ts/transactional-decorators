@@ -10,7 +10,7 @@ import { InternalError } from "@decaf-ts/db-decorators";
  *
  * @function transactional
  *
- * @memberOf module:db-decorators.Decorators.transactions
+ * @memberOf module:transactions
  */
 export function transactional(...data: any[]) {
   return function (
