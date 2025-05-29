@@ -1,12 +1,26 @@
 import { LockCallable } from "../types";
 
+/**
+ * @description Base lock implementation for concurrency control
+ * @summary Provides a basic lock mechanism for controlling access to shared resources, with support for queuing and executing functions when the lock is available
+ * @class Lock
+ * @example
+ * // Using the Lock class to execute a function with exclusive access
+ * const lock = new Lock();
+ * const result = await lock.execute(async () => {
+ *   // This code will run with exclusive access
+ *   return await performCriticalOperation();
+ * });
+ */
 export class Lock {
   private queue: LockCallable[] = [];
   private locked = false;
 
   /**
-   * @summary executes when lock is available
-   * @param {Function} func
+   * @description Executes a function with exclusive lock access
+   * @summary Acquires the lock, executes the provided function, and releases the lock afterward, ensuring proper cleanup even if the function throws an error
+   * @param {Function} func - The function to execute when the lock is acquired
+   * @return {Promise<any>} A promise that resolves with the result of the executed function
    */
   async execute(func: () => any) {
     await this.acquire();

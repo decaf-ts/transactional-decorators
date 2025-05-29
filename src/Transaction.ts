@@ -10,14 +10,48 @@ import { getObjectName } from "./utils";
 import { TransactionalKeys } from "./constants";
 
 /**
- * @summary Transaction Class
- *
- * @param {string} source
- * @param {string} [method]
- * @param {function(): void} [action]
- * @param {any[]} [metadata]
- *
+ * @description Core transaction management class
+ * @summary Manages transaction lifecycle, including creation, execution, and cleanup. Provides mechanisms for binding transactions to objects and methods, ensuring proper transaction context propagation.
+ * @param {string} source - The source/origin of the transaction (typically a class name)
+ * @param {string} [method] - The method name associated with the transaction
+ * @param {function(): any} [action] - The function to execute within the transaction
+ * @param {any[]} [metadata] - Additional metadata to associate with the transaction
  * @class Transaction
+ * @example
+ * // Creating and submitting a transaction
+ * const transaction = new Transaction(
+ *   'UserService',
+ *   'createUser',
+ *   async () => {
+ *     // Transaction logic here
+ *     await db.insert('users', { name: 'John' });
+ *   }
+ * );
+ * Transaction.submit(transaction);
+ * 
+ * // Using the transactional decorator
+ * class UserService {
+ *   @transactional()
+ *   async createUser(data) {
+ *     // Method will be executed within a transaction
+ *     return await db.insert('users', data);
+ *   }
+ * }
+ * @mermaid
+ * sequenceDiagram
+ *   participant C as Client Code
+ *   participant T as Transaction
+ *   participant L as TransactionLock
+ *   participant O as Original Method
+ *   
+ *   C->>T: new Transaction(source, method, action)
+ *   C->>T: Transaction.submit(transaction)
+ *   T->>L: submit(transaction)
+ *   L->>T: fire()
+ *   T->>O: Execute action()
+ *   O-->>T: Return result/error
+ *   T->>L: release(error?)
+ *   L-->>C: Return result/error
  */
 export class Transaction {
   readonly id: number;
@@ -44,11 +78,12 @@ export class Transaction {
   }
 
   /**
-   * @summary Pushes a transaction to que queue and waits its resolution
-   *
-   * @param {any} issuer any class. will be used as this when calling the callbackMethod
-   * @param {Function} callbackMethod callback function containing the transaction. will be called with the issuear as this
-   * @param {any[]} args arguments to pass to the method. Last one must be the callback
+   * @description Queues a transaction for execution
+   * @summary Pushes a transaction to the queue and waits for its resolution. Creates a new transaction with the provided issuer and callback method, then submits it to the transaction lock.
+   * @param {any} issuer - Any class instance that will be used as 'this' when calling the callbackMethod
+   * @param {Function} callbackMethod - Callback function containing the transaction logic, will be called with the issuer as 'this'
+   * @param {any[]} args - Arguments to pass to the method. Last one must be the callback function
+   * @return {void}
    */
   static push(
     issuer: any,
@@ -78,15 +113,19 @@ export class Transaction {
   }
 
   /**
-   * @summary Sets the lock to be used
-   * @param lock
+   * @description Configures the transaction lock implementation
+   * @summary Sets the lock implementation to be used for transaction management, allowing customization of the transaction behavior
+   * @param {TransactionLock} lock - The lock implementation to use for managing transactions
+   * @return {void}
    */
   static setLock(lock: TransactionLock) {
     this.lock = lock;
   }
 
   /**
-   * @summary gets the lock
+   * @description Retrieves the current transaction lock
+   * @summary Gets the current transaction lock instance, creating a default SyncronousLock if none exists
+   * @return {TransactionLock} The current transaction lock implementation
    */
   static getLock(): TransactionLock {
     if (!this.lock) this.lock = new SyncronousLock();
@@ -94,31 +133,39 @@ export class Transaction {
   }
 
   /**
-   * @summary submits a transaction
-   * @param {Transaction} transaction
+   * @description Submits a transaction for processing
+   * @summary Submits a transaction to the current transaction lock for processing and execution
+   * @param {Transaction} transaction - The transaction to submit for processing
+   * @return {void}
    */
   static submit(transaction: Transaction) {
     Transaction.getLock().submit(transaction);
   }
 
   /**
-   * @summary releases the lock
-   * @param {Err} err
+   * @description Releases the transaction lock
+   * @summary Releases the current transaction lock, optionally with an error, allowing the next transaction to proceed
+   * @param {Error} [err] - Optional error that occurred during transaction execution
+   * @return {Promise<void>} A promise that resolves when the lock has been released
    */
   static async release(err?: Error) {
     return Transaction.getLock().release(err);
   }
 
   /**
-   * @summary retrieves the metadata for the transaction
+   * @description Retrieves transaction metadata
+   * @summary Returns a copy of the metadata associated with this transaction, ensuring the original metadata remains unmodified
+   * @return {any[] | undefined} A copy of the transaction metadata or undefined if no metadata exists
    */
   getMetadata() {
     return this.metadata ? [...this.metadata] : undefined;
   }
 
   /**
-   * @summary Binds a new operation to the current transaction
-   * @param {Transaction} nextTransaction
+   * @description Links a new transaction to the current one
+   * @summary Binds a new transaction operation to the current transaction, transferring logs and binding methods to maintain transaction context
+   * @param {Transaction} nextTransaction - The new transaction to bind to the current one
+   * @return {void}
    */
   bindTransaction(nextTransaction: Transaction) {
     // all(`Binding the {0} to {1}`, nextTransaction, this);
@@ -129,12 +176,10 @@ export class Transaction {
   }
 
   /**
-   * @summary Binds the Transactional Decorated Object to the transaction
-   * @description by having all {@link transactional} decorated
-   * methods always pass the current Transaction as an argument
-   *
-   * @param {any} obj
-   * @return {any} the bound {@param obj}
+   * @description Binds an object to the current transaction context
+   * @summary Binds a transactional decorated object to the transaction by ensuring all transactional methods automatically receive the current transaction as their first argument
+   * @param {any} obj - The object to bind to the transaction
+   * @return {any} The bound object with transaction-aware method wrappers
    */
   bindToTransaction(obj: any): any {
     const transactionalMethods = getAllPropertyDecoratorsRecursive(
@@ -184,7 +229,9 @@ export class Transaction {
   }
 
   /**
-   * @summary Fires the Transaction
+   * @description Executes the transaction action
+   * @summary Fires the transaction by executing its associated action function, throwing an error if no action is defined
+   * @return {any} The result of the transaction action
    */
   fire() {
     if (!this.action) throw new Error(`Missing the method`);
@@ -192,9 +239,11 @@ export class Transaction {
   }
 
   /**
-   * @summary toString override
-   * @param {boolean} [withId] defaults to true
-   * @param {boolean} [withLog] defaults to true
+   * @description Provides a string representation of the transaction
+   * @summary Overrides the default toString method to provide a formatted string representation of the transaction, optionally including the transaction ID and log
+   * @param {boolean} [withId=true] - Whether to include the transaction ID in the output
+   * @param {boolean} [withLog=false] - Whether to include the transaction log in the output
+   * @return {string} A string representation of the transaction
    */
   toString(withId = true, withLog = false) {
     return `${withId ? `[${this.id}]` : ""}[Transaction][${this.source}.${this.method}${
@@ -203,11 +252,12 @@ export class Transaction {
   }
 
   /**
-   * @summary gets the transactions reflections key
-   * @function getRepoKey
-   * @param {string} key
-   * @memberOf module:db-decorators.Transactions
-   * */
+   * @description Generates a reflection metadata key for transactions
+   * @summary Creates a prefixed reflection key for transaction-related metadata, ensuring proper namespacing
+   * @param {string} key - The base key to prefix with the transaction reflection namespace
+   * @return {string} The complete reflection key for transaction metadata
+   * @function key
+   */
   static key(key: string) {
     return TransactionalKeys.REFLECT + key;
   }

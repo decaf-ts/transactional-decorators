@@ -1,3 +1,7 @@
+import { Transaction } from "../Transaction";
+import { TransactionLock } from "../interfaces/TransactionLock";
+import { Lock } from "./Lock";
+
 /**
  * @summary Simple Synchronous Lock implementation
  * @description for transaction management
@@ -9,10 +13,7 @@
  *
  * @class SyncronousLock
  * @implements TransactionLock
- */ import { Transaction } from "../Transaction";
-import { TransactionLock } from "../interfaces/TransactionLock";
-import { Lock } from "./Lock";
-
+ */
 export class SyncronousLock implements TransactionLock {
   private counter: number;
   private pendingTransactions: Transaction[];
