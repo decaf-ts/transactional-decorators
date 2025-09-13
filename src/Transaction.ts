@@ -1,7 +1,7 @@
 import { TransactionLock } from "./interfaces/TransactionLock";
 import { Reflection } from "@decaf-ts/reflection";
 import { Callback } from "./types";
-import { SyncronousLock } from "./locks/SyncronousLock";
+import { SynchronousLock } from "./locks/SynchronousLock";
 import {
   DBKeys,
   getAllPropertyDecoratorsRecursive,
@@ -28,7 +28,7 @@ import { TransactionalKeys } from "./constants";
  *   }
  * );
  * Transaction.submit(transaction);
- * 
+ *
  * // Using the transactional decorator
  * class UserService {
  *   @transactional()
@@ -43,7 +43,7 @@ import { TransactionalKeys } from "./constants";
  *   participant T as Transaction
  *   participant L as TransactionLock
  *   participant O as Original Method
- *   
+ *
  *   C->>T: new Transaction(source, method, action)
  *   C->>T: Transaction.submit(transaction)
  *   T->>L: submit(transaction)
@@ -128,7 +128,7 @@ export class Transaction {
    * @return {TransactionLock} The current transaction lock implementation
    */
   static getLock(): TransactionLock {
-    if (!this.lock) this.lock = new SyncronousLock();
+    if (!this.lock) this.lock = new SynchronousLock();
     return this.lock;
   }
 

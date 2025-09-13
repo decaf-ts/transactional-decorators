@@ -2,6 +2,7 @@ import { TransactionalKeys } from "./constants";
 import { metadata } from "@decaf-ts/reflection";
 import { Transaction } from "./Transaction";
 import { InternalError } from "@decaf-ts/db-decorators";
+import { TransactionalError } from "./errors";
 
 /**
  * @description Method decorator that enables transactional behavior
@@ -33,7 +34,7 @@ import { InternalError } from "@decaf-ts/db-decorators";
  *   O-->>T: Return result/error
  *   T->>T: Release transaction
  *   T-->>C: Return result/error
- * @category Decorators
+ * @category Method Decorators
  */
 export function transactional(...data: any[]) {
   return function (
@@ -41,64 +42,62 @@ export function transactional(...data: any[]) {
     propertyKey?: any,
     descriptor?: PropertyDescriptor
   ) {
-    if (!descriptor)
-      throw new InternalError("Missing descriptor. Should be impossible");
+    if (!descriptor || typeof descriptor.value !== "function")
+      throw new InternalError(
+        "Missing method descriptor. Should be impossible"
+      );
     metadata(Transaction.key(TransactionalKeys.TRANSACTIONAL), data)(
       target,
       propertyKey
     );
 
-    const originalMethod = descriptor.value;
-
-    const methodWrapper = function (this: any, ...args: any[]): Promise<any> {
-      // eslint-disable-next-line @typescript-eslint/no-this-alias
-      const self = this;
-      return new Promise<any>((resolve, reject) => {
-        const cb = (err?: Error, result?: any) => {
-          Transaction.release(err).then(() => {
-            if (err) return reject(err);
-            resolve(result);
-          });
-        };
+    descriptor.value = new Proxy(descriptor.value, {
+      apply: async (target, thisArg, args) => {
+        async function cb(err?: Error, result?: any) {
+          try {
+            await Transaction.release(err);
+          } catch (e: unknown) {
+            throw new TransactionalError(`Failed to release transaction: ${e}`);
+          }
+          if (err) throw err;
+          return result;
+        }
 
         let transaction = args.shift();
         if (transaction instanceof Transaction) {
+          async function chainingFunction() {
+            return target.call(
+              updatedTransaction.bindToTransaction(thisArg),
+              ...args
+            );
+          }
           const updatedTransaction: Transaction = new Transaction(
-            this.constructor.name,
+            thisArg.constructor.name,
             propertyKey,
-            async () => {
-              originalMethod
-                .call(updatedTransaction.bindToTransaction(self), ...args)
-                .then(resolve)
-                .catch(reject);
-            },
+            chainingFunction,
             data.length ? data : undefined
           );
 
           transaction.bindTransaction(updatedTransaction);
           transaction.fire();
         } else {
+          async function returnFunction() {
+            return target
+              .call(transaction.bindToTransaction(thisArg), ...args)
+              .then((result: any) => cb(undefined, result))
+              .catch(cb);
+          }
           args.unshift(transaction);
           transaction = new Transaction(
-            this.constructor.name,
+            thisArg.constructor.name,
             propertyKey,
-            () => {
-              originalMethod
-                .call(transaction.bindToTransaction(self), ...args)
-                .then((result: any) => cb(undefined, result))
-                .catch(cb);
-            },
+            returnFunction,
             data.length ? data : undefined
           );
           Transaction.submit(transaction);
         }
-      });
-    };
-
-    Object.defineProperty(methodWrapper, "name", {
-      value: propertyKey,
+      },
     });
-    descriptor.value = methodWrapper;
   };
 }
 //
