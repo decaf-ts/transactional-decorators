@@ -16,7 +16,7 @@ export class RamRepository<T extends Model> extends Repository<T> {
   @transactional()
   async create(model: T): Promise<T> {
     const pk = findModelId(model);
-    this.ram[pk] = model;
+    this.ram[pk as string] = model;
     return model;
   }
 
@@ -35,7 +35,7 @@ export class RamRepository<T extends Model> extends Repository<T> {
   @transactional()
   async update(model: T): Promise<T> {
     const pk = findModelId(model);
-    this.ram[pk] = model;
+    this.ram[pk as string] = model;
     return model;
   }
 }

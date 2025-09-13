@@ -9,7 +9,7 @@ import { DBOperations, readonly, timestamp, id } from "@decaf-ts/db-decorators";
 @model()
 export class TestModelAsync extends Model {
   @id()
-  id?: string | number = undefined;
+  id!: string | number;
 
   @readonly()
   name?: string = undefined;
