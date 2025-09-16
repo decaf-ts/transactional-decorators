@@ -5,12 +5,17 @@ import {
 } from "@decaf-ts/db-decorators";
 import { Constructor, Model } from "@decaf-ts/decorator-validation";
 import { transactional } from "../../src";
+import { Logger, Logging } from "@decaf-ts/logging";
 
 export class RamRepository<T extends Model> extends Repository<T> {
   protected ram: Record<string, T> = {};
 
   constructor(clazz?: Constructor<T>) {
     super(clazz);
+  }
+
+  get log(): Logger {
+    return Logging.for(this as any);
   }
 
   @transactional()

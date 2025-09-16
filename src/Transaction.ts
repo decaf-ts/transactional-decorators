@@ -191,6 +191,12 @@ export class Transaction {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
+    const proxy = new Proxy(obj, {
+      get: (target: any, propertyKey: string) => {
+        return Reflect.get(target, propertyKey);
+      },
+    });
+
     const boundObj = Reflection.getAllProperties(obj).reduce(
       (accum: any, k: string) => {
         if (
@@ -233,7 +239,7 @@ export class Transaction {
    * @summary Fires the transaction by executing its associated action function, throwing an error if no action is defined
    * @return {any} The result of the transaction action
    */
-  fire() {
+  async fire() {
     if (!this.action) throw new Error(`Missing the method`);
     return this.action();
   }

@@ -1,9 +1,10 @@
-import { TransactionalRepository } from "./repositories";
+import { DBRepo, TransactionalRepository } from "./repositories";
 import { TestModelAsync } from "./TestModel";
 import { Injectables } from "@decaf-ts/injectable-decorators";
 import { Callback, Transaction } from "../../src";
 import { SynchronousLock } from "../../src";
 import { Repository } from "@decaf-ts/db-decorators";
+import { GenericCaller } from "./GenericCaller";
 
 jest.setTimeout(30000);
 if (process.env["GITLAB_CI"]) jest.setTimeout(3 * 30000);
@@ -66,6 +67,7 @@ describe(`Transactional Context Test`, function () {
     const consumerRunner = new ConsumerRunner(
       "create",
       true,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       async (identifier: string, callback: Callback) => {
         const tm = new TestModelAsync();
         const created = await testRepository.create(tm);
@@ -96,7 +98,7 @@ describe(`Transactional Context Test`, function () {
       jest.resetAllMocks();
     });
 
-    it("Handles calls to multiple transactional methods within the same Async transactional function", (callback) => {
+    it("Handles calls to multiple transactional methods within the same Async transactional function", async () => {
       const caller = new GenericCaller();
 
       const tm = new TestModelAsync();
@@ -111,25 +113,15 @@ describe(`Transactional Context Test`, function () {
         "bindTransaction"
       );
 
-      caller.runAsync(
-        tm,
-        (err: Error, model1?: TestModelAsync, model2?: TestModelAsync) => {
-          if (err || !model1 || !model2)
-            return callback(err || "missing results");
+      const { model1, model2 } = await caller.run(tm);
 
-          try {
-            expect(mockSubmit).toHaveBeenCalledTimes(1);
-            expect(mockRelease).toHaveBeenCalledTimes(1);
-            expect(mockBindTransaction).toHaveBeenCalledTimes(4);
-          } catch (e: any) {
-            return callback(e);
-          }
-
-          callback();
-        }
-      );
+      expect(model1).toBeDefined();
+      expect(model2).toBeDefined();
+      expect(mockSubmit).toHaveBeenCalledTimes(1);
+      expect(mockRelease).toHaveBeenCalledTimes(1);
+      expect(mockBindTransaction).toHaveBeenCalledTimes(4);
     });
-    it("Handles calls to multiple transactional methods within the same Promise Based transactional function", (callback) => {
+    it("Handles calls to multiple transactional methods within the same Promise Based transactional function", async () => {
       const caller = new GenericCaller();
 
       const tm = new TestModelAsync();
@@ -144,22 +136,13 @@ describe(`Transactional Context Test`, function () {
         "bindTransaction"
       );
 
-      caller
-        .runPromise(tm)
-        .then((result: { model1: TestModelAsync; model2: TestModelAsync }) => {
-          try {
-            const { model1, model2 } = result;
-            expect(model1).toBeDefined();
-            expect(model2).toBeDefined();
-            expect(mockSubmit).toHaveBeenCalledTimes(1);
-            expect(mockRelease).toHaveBeenCalledTimes(1);
-            expect(mockBindTransaction).toHaveBeenCalledTimes(5);
-          } catch (e: any) {
-            return callback(e);
-          }
-          callback();
-        })
-        .catch(callback);
+      const { model1, model2 } = await caller.run(tm);
+
+      expect(model1).toBeDefined();
+      expect(model2).toBeDefined();
+      expect(mockSubmit).toHaveBeenCalledTimes(1);
+      expect(mockRelease).toHaveBeenCalledTimes(1);
+      expect(mockBindTransaction).toHaveBeenCalledTimes(5);
     });
   });
   describe("Handles onBegin and onEnd methods", () => {
@@ -212,7 +195,7 @@ describe(`Transactional Context Test`, function () {
       const releaseTransactionMock = jest.spyOn(lock, "release");
 
       function func(this: TransactionalRepository, ...args: any[]) {
-        // @ts-ignore
+        // @ts-expect-error varargs
         this.create(...args);
       }
 
@@ -221,7 +204,7 @@ describe(`Transactional Context Test`, function () {
         func,
         "testModel.id",
         testModel,
-        (err: Err, result?: TestModelAsync) => {
+        (err?: any, result?: TestModelAsync) => {
           if (err || !result) return callback(err || "missing model");
           try {
             expect(result.id).toBeDefined();
@@ -248,7 +231,7 @@ describe(`Transactional Context Test`, function () {
       jest.resetAllMocks();
     });
 
-    it("Logs a simple transaction properly", (callback) => {
+    it("Logs a simple transaction properly", async () => {
       const repo = new DBRepo(TestModelAsync);
 
       const model = new TestModelAsync();
@@ -281,24 +264,20 @@ describe(`Transactional Context Test`, function () {
         });
       });
 
-      repo.create("key1", model, (err: Error, created?: TestModelAsync) => {
-        if (err || !created) return callback(err);
-
-        try {
-          expect(mockSubmit).toHaveBeenCalledTimes(1);
-          expect(mockRelease).toHaveBeenCalledTimes(1);
-          expect(mockBindTransaction).toBeDefined();
-          expect(mockBindTransaction).toHaveBeenCalledTimes(1);
-          expect(currentTransaction).toBeDefined();
-          expect(currentTransaction.log.length).toEqual(2);
-        } catch (e: any) {
-          return callback(e);
-        }
-        callback();
-      });
+      const created = await repo.create(
+        new TestModelAsync({
+          id: "key1",
+        })
+      );
+      expect(mockSubmit).toHaveBeenCalledTimes(1);
+      expect(mockRelease).toHaveBeenCalledTimes(1);
+      expect(mockBindTransaction).toBeDefined();
+      expect(mockBindTransaction).toHaveBeenCalledTimes(1);
+      expect(currentTransaction).toBeDefined();
+      expect(currentTransaction.log.length).toEqual(2);
     });
 
-    it("Logs a multiple transaction properly", (callback) => {
+    it("Logs a multiple transaction properly", async () => {
       const repo = new DBRepo(TestModelAsync);
 
       const transactionLock = Transaction.getLock();
@@ -311,7 +290,7 @@ describe(`Transactional Context Test`, function () {
 
       const mockRelease = jest.spyOn(transactionLock, "release");
 
-      mockRelease.mockImplementation(async (err?: Err) => {
+      mockRelease.mockImplementation(async (err?: Error) => {
         return originalRelease(err);
       });
 
@@ -330,33 +309,23 @@ describe(`Transactional Context Test`, function () {
       });
 
       const objs = Object.keys(new Array(10).fill(0)).reduce(
-        (accum: any, k) => {
-          accum[`key${k}`] = new TestModelAsync();
+        (accum: any, k, i) => {
+          accum[`key${k}`] = new TestModelAsync({
+            id: "id" + i,
+          });
           return accum;
         },
         {}
       );
 
-      repo.createAll(
-        Object.keys(objs),
-        Object.values(objs),
-        (err: Err, created?: TestModelAsync[]) => {
-          if (err || !created) return callback(err);
-
-          try {
-            expect(created.length).toEqual(10);
-            expect(mockSubmit).toHaveBeenCalledTimes(1);
-            expect(mockRelease).toHaveBeenCalledTimes(1);
-            expect(mockBindTransaction).toBeDefined();
-            expect(mockBindTransaction).toHaveBeenCalledTimes(20);
-            expect(currentTransaction).toBeDefined();
-            expect(currentTransaction.log.length).toEqual(21);
-          } catch (e: any) {
-            return callback(e);
-          }
-          callback();
-        }
-      );
+      const created = await repo.createAll(Object.values(objs));
+      expect(created.length).toEqual(10);
+      expect(mockSubmit).toHaveBeenCalledTimes(1);
+      expect(mockRelease).toHaveBeenCalledTimes(1);
+      expect(mockBindTransaction).toBeDefined();
+      expect(mockBindTransaction).toHaveBeenCalledTimes(20);
+      expect(currentTransaction).toBeDefined();
+      expect(currentTransaction.log.length).toEqual(21);
     });
   });
 });

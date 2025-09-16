@@ -4,7 +4,14 @@ import {
   Model,
   ModelArg,
 } from "@decaf-ts/decorator-validation";
-import { DBOperations, readonly, timestamp, id } from "@decaf-ts/db-decorators";
+import {
+  DBOperations,
+  readonly,
+  timestamp,
+  id,
+  TimestampValidator,
+} from "@decaf-ts/db-decorators";
+const a = TimestampValidator;
 
 @model()
 export class TestModelAsync extends Model {
@@ -12,26 +19,26 @@ export class TestModelAsync extends Model {
   id!: string | number;
 
   @readonly()
-  name?: string = undefined;
+  name?: string;
 
   @minlength(5)
-  address?: string = undefined;
+  address?: string;
 
   @timestamp()
-  updatedOn?: Date = undefined;
+  updatedOn!: Date;
 
   @timestamp(DBOperations.CREATE)
   @readonly()
-  createdOn?: Date = undefined;
+  createdOn!: Date;
 
-  public constructor(testModel?: ModelArg<TestModelAsync>) {
+  constructor(testModel?: ModelArg<TestModelAsync>) {
     super(testModel);
   }
 }
 
 @model()
 export class InheritanceTestModel extends TestModelAsync {
-  public constructor(testModel?: ModelArg<InheritanceTestModel>) {
+  constructor(testModel?: ModelArg<InheritanceTestModel>) {
     super(testModel);
   }
 }

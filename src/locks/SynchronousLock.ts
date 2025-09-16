@@ -1,7 +1,7 @@
 import { Transaction } from "../Transaction";
 import { TransactionLock } from "../interfaces/TransactionLock";
 import { Lock } from "./Lock";
-import { LoggedClass } from "@decaf-ts/logging/lib/LoggedClass";
+import { LoggedClass } from "@decaf-ts/logging";
 
 /**
  * @summary Simple Synchronous Lock implementation
@@ -74,12 +74,12 @@ export class SynchronousLock extends LoggedClass implements TransactionLock {
         log.silly(
           `Firing transaction ${transaction.id}. ${this.pendingTransactions.length} remaining...`
         );
-        transaction.fire();
+        return transaction.fire();
       } else {
         log.silly(
           `Firing transaction ${transaction.id}. ${this.pendingTransactions.length} remaining...`
         );
-        transaction.fire();
+        return transaction.fire();
       }
     });
   }
