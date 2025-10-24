@@ -1,176 +1,174 @@
-{
-  "transactional‑decorators": [
-    {
-      "Slogan": "Transactional‑Decorators: commit your code without committing your caffeine overdose.",
-      "Tags": "Transactions, Coffee‑themed, Calm"
-    },
-    {
-      "Slogan": "Decorate your methods with @transactional like you garnish your latte.",
-      "Tags": "Decorators, Fun, Technical"
-    },
-    {
-      "Slogan": "Begin transaction. Sip decaf. Then commit without the crash.",
-      "Tags": "Workflow, Calm, Coffee‑themed"
-    },
-    {
-      "Slogan": "Lock, save, rollback—while your heart rate stays mellow.",
-      "Tags": "Transactions, Chill, Developer"
-    },
-    {
-      "Slogan": "When your methods execute calmly, your database stays sane.",
-      "Tags": "DeveloperDX, Calm, Technical"
-    },
-    {
-      "Slogan": "Batch operations? Just another day at the café.",
-      "Tags": "BatchOps, Metaphor, Coffee‑themed"
-    },
-    {
-      "Slogan": "No caffeine jitters—just ACID comforts.",
-      "Tags": "ACID, Humor, Technical"
-    },
-    {
-      "Slogan": "Let your service classes relax—transactional support’s got your back.",
-      "Tags": "Services, Calm, Developer"
-    },
-    {
-      "Slogan": "Methods wrapped in @transactional: because code should run like a decaf drip.",
-      "Tags": "Decorators, Coffee‑themed, Tech"
-    },
-    {
-      "Slogan": "Start, commit, end—handled quietly, like a gentle espresso pour.",
-      "Tags": "Workflow, Calm, Coffee‑themed"
-    },
-    {
-      "Slogan": "Transactional context: your code’s relaxation lounge.",
-      "Tags": "Context, Chill, Developer"
-    },
-    {
-      "Slogan": "Errors within a transaction? Rollback, breathe, and move on.",
-      "Tags": "ErrorHandling, Calm, Technical"
-    },
-    {
-      "Slogan": "Your methods coffee‑break while the transaction runs.",
-      "Tags": "Metaphor, Fun, Developer"
-    },
-    {
-      "Slogan": "Commit the change. Keep the calm.",
-      "Tags": "Commit, Calm, Technical"
-    },
-    {
-      "Slogan": "Decorator‑driven transactions so you don’t transact your blood pressure.",
-      "Tags": "Decorators, Humor, Calm"
-    },
-    {
-      "Slogan": "When concurrency looms, splash in decaf and stay ready.",
-      "Tags": "Concurrency, Coffee‑themed, Developer"
-    },
-    {
-      "Slogan": "Transaction boundaries without the caffeine boundaries.",
-      "Tags": "Boundaries, Calm, Technical"
-    },
-    {
-      "Slogan": "Lock your data, unlock your dev chill.",
-      "Tags": "Locking, Chill, Developer"
-    },
-    {
-      "Slogan": "From method start to transaction end—smooth as a decaf latte.",
-      "Tags": "Workflow, Coffee‑themed, Tech"
-    },
-    {
-      "Slogan": "Isolation levels? More like relaxation levels.",
-      "Tags": "Isolation, Humor, Technical"
-    },
-    {
-      "Slogan": "Decorate once. Transact forever. Heart rate unchanged.",
-      "Tags": "Decorators, Calm, Developer"
-    },
-    {
-      "Slogan": "Avoid commit storms and caffeine storms alike.",
-      "Tags": "Commits, Humor, Calm"
-    },
-    {
-      "Slogan": "Your code runs slow‑brew, not sprint‑brew.",
-      "Tags": "Performance, Metaphor, Coffee‑themed"
-    },
-    {
-      "Slogan": "Transaction manager in one hand, decaf in the other.",
-      "Tags": "Developer, Coffee‑themed, Fun"
-    },
-    {
-      "Slogan": "Rollback made polite. No caffeine crash required.",
-      "Tags": "Rollback, Calm, Technical"
-    },
-    {
-      "Slogan": "Atomic operations served with a side of serenity.",
-      "Tags": "Atomicity, Calm, Developer"
-    },
-    {
-      "Slogan": "Decorator meets transaction meets developer zen.",
-      "Tags": "Decorators, Calm, Developer"
-    },
-    {
-      "Slogan": "Start your unit of work. Start your decaf drip.",
-      "Tags": "UnitOfWork, Coffee‑themed, Tech"
-    },
-    {
-      "Slogan": "Transaction boundaries that don’t boundary your sleep.",
-      "Tags": "Sleep, Calm, Developer"
-    },
-    {
-      "Slogan": "Your DB commit queue shouldn’t spike your adrenaline.",
-      "Tags": "Database, Calm, Technical"
-    },
-    {
-      "Slogan": "Let your transaction finish before your coffee cools.",
-      "Tags": "Timing, Coffee‑themed, Fun"
-    },
-    {
-      "Slogan": "Because your data deserves the same decaf treatment as your code.",
-      "Tags": "Data, Coffee‑themed, Developer"
-    },
-    {
-      "Slogan": "Transactions handled. Features shipped. Jitters avoided.",
-      "Tags": "Workflow, Productivity, Calm"
-    },
-    {
-      "Slogan": "Decorator‑based transaction control: lean code, relaxed developers.",
-      "Tags": "Decorators, DeveloperDX, Calm"
-    },
-    {
-      "Slogan": "Isolation, atomicity and peace of mind.",
-      "Tags": "ACID, Calm, Technical"
-    },
-    {
-      "Slogan": "Your method calls get the lounge‑treatment.",
-      "Tags": "MethodCalls, Metaphor, Chill"
-    },
-    {
-      "Slogan": "No caffeine sprint. Just a smooth commit.",
-      "Tags": "Commit, Coffee‑themed, Developer"
-    },
-    {
-      "Slogan": "Your architecture’s in‑between‑transaction nap zone.",
-      "Tags": "Architecture, Relaxed, Developer"
-    },
-    {
-      "Slogan": "Avoid accidental double‑commit binges.",
-      "Tags": "Bugs, Calm, Technical"
-    },
-    {
-      "Slogan": "Wrap your services in calm, not in a caffeine frenzy.",
-      "Tags": "Services, Calm, Coffee‑themed"
-    },
-    {
-      "Slogan": "Transaction decorators: your code’s coffee break.",
-      "Tags": "Decorators, Coffee‑themed, Fun"
-    },
-    {
-      "Slogan": "Commit when ready. Relax always.",
-      "Tags": "Commit, Chill, Developer"
-    },
-    {
-      "Slogan": "Transactional‑Decorators: because even your database deserves decaf code.",
-      "Tags": "Branding, Coffee‑themed, Calm"
-    }
-  ]
-}
+[
+  {
+    "Slogan": "Transactional‑Decorators: commit your code without committing your caffeine overdose.",
+    "Tags": "Transactions, Coffee‑themed, Calm"
+  },
+  {
+    "Slogan": "Decorate your methods with @transactional like you garnish your latte.",
+    "Tags": "Decorators, Fun, Technical"
+  },
+  {
+    "Slogan": "Begin transaction. Sip decaf. Then commit without the crash.",
+    "Tags": "Workflow, Calm, Coffee‑themed"
+  },
+  {
+    "Slogan": "Lock, save, rollback—while your heart rate stays mellow.",
+    "Tags": "Transactions, Chill, Developer"
+  },
+  {
+    "Slogan": "When your methods execute calmly, your database stays sane.",
+    "Tags": "DeveloperDX, Calm, Technical"
+  },
+  {
+    "Slogan": "Batch operations? Just another day at the café.",
+    "Tags": "BatchOps, Metaphor, Coffee‑themed"
+  },
+  {
+    "Slogan": "No caffeine jitters—just ACID comforts.",
+    "Tags": "ACID, Humor, Technical"
+  },
+  {
+    "Slogan": "Let your service classes relax—transactional support’s got your back.",
+    "Tags": "Services, Calm, Developer"
+  },
+  {
+    "Slogan": "Methods wrapped in @transactional: because code should run like a decaf drip.",
+    "Tags": "Decorators, Coffee‑themed, Tech"
+  },
+  {
+    "Slogan": "Start, commit, end—handled quietly, like a gentle espresso pour.",
+    "Tags": "Workflow, Calm, Coffee‑themed"
+  },
+  {
+    "Slogan": "Transactional context: your code’s relaxation lounge.",
+    "Tags": "Context, Chill, Developer"
+  },
+  {
+    "Slogan": "Errors within a transaction? Rollback, breathe, and move on.",
+    "Tags": "ErrorHandling, Calm, Technical"
+  },
+  {
+    "Slogan": "Your methods coffee‑break while the transaction runs.",
+    "Tags": "Metaphor, Fun, Developer"
+  },
+  {
+    "Slogan": "Commit the change. Keep the calm.",
+    "Tags": "Commit, Calm, Technical"
+  },
+  {
+    "Slogan": "Decorator‑driven transactions so you don’t transact your blood pressure.",
+    "Tags": "Decorators, Humor, Calm"
+  },
+  {
+    "Slogan": "When concurrency looms, splash in decaf and stay ready.",
+    "Tags": "Concurrency, Coffee‑themed, Developer"
+  },
+  {
+    "Slogan": "Transaction boundaries without the caffeine boundaries.",
+    "Tags": "Boundaries, Calm, Technical"
+  },
+  {
+    "Slogan": "Lock your data, unlock your dev chill.",
+    "Tags": "Locking, Chill, Developer"
+  },
+  {
+    "Slogan": "From method start to transaction end—smooth as a decaf latte.",
+    "Tags": "Workflow, Coffee‑themed, Tech"
+  },
+  {
+    "Slogan": "Isolation levels? More like relaxation levels.",
+    "Tags": "Isolation, Humor, Technical"
+  },
+  {
+    "Slogan": "Decorate once. Transact forever. Heart rate unchanged.",
+    "Tags": "Decorators, Calm, Developer"
+  },
+  {
+    "Slogan": "Avoid commit storms and caffeine storms alike.",
+    "Tags": "Commits, Humor, Calm"
+  },
+  {
+    "Slogan": "Your code runs slow‑brew, not sprint‑brew.",
+    "Tags": "Performance, Metaphor, Coffee‑themed"
+  },
+  {
+    "Slogan": "Transaction manager in one hand, decaf in the other.",
+    "Tags": "Developer, Coffee‑themed, Fun"
+  },
+  {
+    "Slogan": "Rollback made polite. No caffeine crash required.",
+    "Tags": "Rollback, Calm, Technical"
+  },
+  {
+    "Slogan": "Atomic operations served with a side of serenity.",
+    "Tags": "Atomicity, Calm, Developer"
+  },
+  {
+    "Slogan": "Decorator meets transaction meets developer zen.",
+    "Tags": "Decorators, Calm, Developer"
+  },
+  {
+    "Slogan": "Start your unit of work. Start your decaf drip.",
+    "Tags": "UnitOfWork, Coffee‑themed, Tech"
+  },
+  {
+    "Slogan": "Transaction boundaries that don’t boundary your sleep.",
+    "Tags": "Sleep, Calm, Developer"
+  },
+  {
+    "Slogan": "Your DB commit queue shouldn’t spike your adrenaline.",
+    "Tags": "Database, Calm, Technical"
+  },
+  {
+    "Slogan": "Let your transaction finish before your coffee cools.",
+    "Tags": "Timing, Coffee‑themed, Fun"
+  },
+  {
+    "Slogan": "Because your data deserves the same decaf treatment as your code.",
+    "Tags": "Data, Coffee‑themed, Developer"
+  },
+  {
+    "Slogan": "Transactions handled. Features shipped. Jitters avoided.",
+    "Tags": "Workflow, Productivity, Calm"
+  },
+  {
+    "Slogan": "Decorator‑based transaction control: lean code, relaxed developers.",
+    "Tags": "Decorators, DeveloperDX, Calm"
+  },
+  {
+    "Slogan": "Isolation, atomicity and peace of mind.",
+    "Tags": "ACID, Calm, Technical"
+  },
+  {
+    "Slogan": "Your method calls get the lounge‑treatment.",
+    "Tags": "MethodCalls, Metaphor, Chill"
+  },
+  {
+    "Slogan": "No caffeine sprint. Just a smooth commit.",
+    "Tags": "Commit, Coffee‑themed, Developer"
+  },
+  {
+    "Slogan": "Your architecture’s in‑between‑transaction nap zone.",
+    "Tags": "Architecture, Relaxed, Developer"
+  },
+  {
+    "Slogan": "Avoid accidental double‑commit binges.",
+    "Tags": "Bugs, Calm, Technical"
+  },
+  {
+    "Slogan": "Wrap your services in calm, not in a caffeine frenzy.",
+    "Tags": "Services, Calm, Coffee‑themed"
+  },
+  {
+    "Slogan": "Transaction decorators: your code’s coffee break.",
+    "Tags": "Decorators, Coffee‑themed, Fun"
+  },
+  {
+    "Slogan": "Commit when ready. Relax always.",
+    "Tags": "Commit, Chill, Developer"
+  },
+  {
+    "Slogan": "Transactional‑Decorators: because even your database deserves decaf code.",
+    "Tags": "Branding, Coffee‑themed, Calm"
+  }
+]
