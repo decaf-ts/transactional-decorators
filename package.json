@@ -1,6 +1,6 @@
 {
   "name": "@decaf-ts/transactional-decorators",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Locking and transactions",
   "type": "module",
   "exports": {
