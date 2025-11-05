@@ -44,7 +44,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/decaf-ts/ts-workspace.git"
+    "url": "git+https://github.com/decaf-ts/transactional-decorators.git"
   },
   "engines": {
     "node": ">=20.0.0",
@@ -69,16 +69,18 @@
   "author": "Tiago Venceslau and Contributors",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/decaf-ts/ts-workspace/issues"
+    "url": "https://github.com/decaf-ts/transactional-decorators/issues"
   },
-  "homepage": "https://github.com/decaf-ts/ts-workspace#readme",
+  "homepage": "https://github.com/decaf-ts/transactional-decorators#readme",
   "devDependencies": {
+    "@decaf-ts/logging": "latest",
     "@decaf-ts/utils": "latest"
   },
   "peerDependencies": {
     "@decaf-ts/db-decorators": "latest",
     "@decaf-ts/decoration": "latest",
     "@decaf-ts/decorator-validation": "latest",
+    "@decaf-ts/injectable-decorators": "latest",
     "@decaf-ts/reflection": "latest",
     "reflect-metadata": "^0.2.1"
   }
