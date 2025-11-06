@@ -1,13 +1,7 @@
-import { Callback } from "../../src";
 import { TestModelAsync } from "./TestModel";
 import { transactional } from "../../src";
 import { RamRepository } from "./RamRepository";
-import {
-  Constructor,
-  model,
-  Model,
-  required,
-} from "@decaf-ts/decorator-validation";
+import { Constructor, Model, required } from "@decaf-ts/decorator-validation";
 import { findModelId, IRepository, Repository } from "@decaf-ts/db-decorators";
 import { prop } from "@decaf-ts/decoration";
 import { sf } from "@decaf-ts/logging";

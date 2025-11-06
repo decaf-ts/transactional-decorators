@@ -171,7 +171,7 @@ describe(`Transactional Context Test`, function () {
 
       function func(this: TransactionalRepository, ...args: any[]) {
         // @ts-expect-error teasting
-        this.create(...args);
+        return this.create(...args);
       }
 
       const result = await Transaction.push(testRepository, func, testModel);
@@ -212,6 +212,7 @@ describe(`Transactional Context Test`, function () {
         return originalRelease(err);
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       let currentTransaction: Transaction, endTransaction: Transaction;
       let originalBindTransaction: any, mockBindTransaction: any;
 

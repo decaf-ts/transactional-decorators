@@ -2,7 +2,6 @@ import { TransactionLock } from "./interfaces/TransactionLock";
 import { SynchronousLock } from "./locks/SynchronousLock";
 import { DBKeys } from "@decaf-ts/db-decorators";
 import "./overrides";
-import { Callback } from "./types";
 import { Metadata } from "@decaf-ts/decoration";
 import { LoggedClass, getObjectName } from "@decaf-ts/logging";
 
@@ -80,34 +79,34 @@ export class Transaction extends LoggedClass {
    * @description Queues a transaction for execution
    * @summary Pushes a transaction to the queue and waits for its resolution. Creates a new transaction with the provided issuer and callback method, then submits it to the transaction lock.
    * @param {any} issuer - Any class instance that will be used as 'this' when calling the callbackMethod
-   * @param {Function} callbackMethod - Callback function containing the transaction logic, will be called with the issuer as 'this'
+   * @param {Function} method - function containing the transaction logic, will be called with the issuer as 'this'
    * @param {any[]} args - Arguments to pass to the method. Last one must be the callback function
    * @return {void}
    */
-  static async push(
+  static async push<R>(
     issuer: any,
-    callbackMethod: (...argzz: (any | Callback)[]) => void,
-    ...args: (any | Callback)[]
-  ) {
-    return new Promise<any>((resolve, reject) => {
-      async function cb(err?: Error, ...args: any[]) {
-        await Transaction.getLock().release(err);
-        if (err) return reject(err);
-        return resolve(args.length === 1 ? args[0] : args);
-      }
-
-      const transaction: Transaction = new Transaction(
-        issuer.constructor.name,
-        callbackMethod.name ? getObjectName(callbackMethod) : "Anonymous",
-        () => {
-          return callbackMethod.call(
-            transaction.bindToTransaction(issuer),
-            ...args,
-            cb
-          );
+    method: (...argzz: any[]) => Promise<R>,
+    ...args: any[]
+  ): Promise<R> {
+    return new Promise<R>((resolve, reject) => {
+      const transaction = new Transaction(
+        getObjectName(issuer),
+        getObjectName(method),
+        async () => {
+          let result: any;
+          try {
+            result = await Promise.resolve(
+              method.call(transaction.bindToTransaction(issuer), ...args)
+            );
+          } catch (e: unknown) {
+            await Transaction.getLock().release(e as Error);
+            return reject(e);
+          }
+          await Transaction.getLock().release();
+          return resolve(result);
         }
       );
-      Transaction.getLock().submit(transaction);
+      return Transaction.getLock().submit(transaction);
     });
   }
 
@@ -211,34 +210,6 @@ export class Transaction extends LoggedClass {
         return Reflect.get(target, prop, receiver);
       },
     });
-    //
-    // const boundObj = Reflection.getAllProperties(obj).reduce(
-    //   (accum: any, k: string) => {
-    //     if (
-    //       Object.keys(transactionalMethods).indexOf(k) !== -1 &&
-    //       transactionalMethods[k].find(
-    //         (o) => o.key === TransactionalKeys.TRANSACTIONAL
-    //       )
-    //     )
-    //       accum[k] = (...args: any[]) =>
-    //         obj[k].call(obj.__originalObj || obj, self, ...args);
-    //     else if (k === "clazz" || k === "constructor") accum[k] = obj[k];
-    //     else if (typeof obj[k] === "function")
-    //       accum[k] = obj[k].bind(obj.__originalObj || obj);
-    //     else if (typeof obj[k] === "object" && obj[k].constructor) {
-    //       const decs = Reflection.getClassDecorators(
-    //         TransactionalKeys.REFLECT,
-    //         obj[k]
-    //       );
-    //       if (decs.find((e: any) => e.key === TransactionalKeys.TRANSACTIONAL))
-    //         accum[k] = self.bindToTransaction(obj[k]);
-    //       else accum[k] = obj[k];
-    //     } else accum[k] = obj[k];
-    //
-    //     return accum;
-    //   },
-    //   {}
-    // );
 
     boundObj[DBKeys.ORIGINAL as keyof typeof boundObj] =
       obj[DBKeys.ORIGINAL] || obj;
