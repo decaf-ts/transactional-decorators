@@ -1,5 +1,5 @@
 import { TransactionalKeys } from "./constants";
-import { metadata } from "@decaf-ts/reflection";
+import { Metadata, method } from "@decaf-ts/decoration";
 import { Transaction } from "./Transaction";
 import { InternalError } from "@decaf-ts/db-decorators";
 
@@ -36,69 +36,133 @@ import { InternalError } from "@decaf-ts/db-decorators";
  * @category Decorators
  */
 export function transactional(...data: any[]) {
-  return function (
-    target: any,
-    propertyKey?: any,
-    descriptor?: PropertyDescriptor
-  ) {
+  return function (target: any, propertyKey?: any, descriptor?: any) {
     if (!descriptor)
-      throw new InternalError("Missing descriptor. Should be impossible");
-    metadata(Transaction.key(TransactionalKeys.TRANSACTIONAL), data)(
-      target,
-      propertyKey
+      throw new InternalError("This decorator only applies to methods");
+    method()(target, propertyKey, descriptor);
+    Metadata.set(
+      target.constructor,
+      Metadata.key(TransactionalKeys.TRANSACTIONAL, propertyKey),
+      {
+        data: data,
+      }
     );
+    descriptor.value = new Proxy(descriptor.value, {
+      async apply(obj: any, thisArg: any, argArray: any[]): Promise<any> {
+        return new Promise<any>((resolve, reject) => {
+          async function exitFunction(
+            err?: Error | any,
+            result?: any
+          ): Promise<any> {
+            if (err && !(err instanceof Error) && !result) {
+              result = err;
+              err = undefined;
+            }
+            await Transaction.release(err);
+            return err ? reject(err) : resolve(result);
+          }
 
-    const originalMethod = descriptor.value;
-
-    const methodWrapper = function (this: any, ...args: any[]): Promise<any> {
-      // eslint-disable-next-line @typescript-eslint/no-this-alias
-      const self = this;
-      return new Promise<any>((resolve, reject) => {
-        const cb = (err?: Error, result?: any) => {
-          Transaction.release(err).then(() => {
-            if (err) return reject(err);
-            resolve(result);
-          });
-        };
-
-        let transaction = args.shift();
-        if (transaction instanceof Transaction) {
-          const updatedTransaction: Transaction = new Transaction(
-            this.constructor.name,
-            propertyKey,
-            async () => {
-              originalMethod
-                .call(updatedTransaction.bindToTransaction(self), ...args)
-                .then(resolve)
-                .catch(reject);
-            },
-            data.length ? data : undefined
-          );
-
-          transaction.bindTransaction(updatedTransaction);
-          transaction.fire();
-        } else {
-          args.unshift(transaction);
-          transaction = new Transaction(
-            this.constructor.name,
-            propertyKey,
-            () => {
-              originalMethod
-                .call(transaction.bindToTransaction(self), ...args)
-                .then((result: any) => cb(undefined, result))
-                .catch(cb);
-            },
-            data.length ? data : undefined
-          );
-          Transaction.submit(transaction);
-        }
-      });
-    };
-
-    Object.defineProperty(methodWrapper, "name", {
-      value: propertyKey,
+          const transaction = argArray.shift();
+          if (transaction instanceof Transaction) {
+            const updatedTransaction: Transaction = new Transaction(
+              target.name,
+              propertyKey,
+              async () => {
+                try {
+                  return resolve(
+                    await Reflect.apply(
+                      obj,
+                      updatedTransaction.bindToTransaction(thisArg),
+                      argArray
+                    )
+                  );
+                } catch (e: unknown) {
+                  return reject(e);
+                }
+              },
+              data.length ? data : undefined
+            );
+            transaction.bindTransaction(updatedTransaction);
+            transaction.fire();
+          } else {
+            argArray.unshift(transaction);
+            const newTransaction = new Transaction(
+              target.name,
+              propertyKey,
+              async () => {
+                try {
+                  return exitFunction(
+                    undefined,
+                    await Reflect.apply(
+                      obj,
+                      newTransaction.bindToTransaction(thisArg),
+                      argArray
+                    )
+                  );
+                } catch (e: unknown) {
+                  return exitFunction(e as Error);
+                }
+              },
+              data.length ? data : undefined
+            );
+            Transaction.submit(newTransaction);
+          }
+        });
+      },
     });
-    descriptor.value = methodWrapper;
+
+    return descriptor;
+    // const originalMethod = descriptor.value;
+    //
+    // const methodWrapper = function (this: any, ...args: any[]): Promise<any> {
+    //   // eslint-disable-next-line @typescript-eslint/no-this-alias
+    //   const self = this;
+    //   return new Promise<any>((resolve, reject) => {
+    //     const cb = (err?: Error, result?: any) => {
+    //       Transaction.release(err).then(() => {
+    //         if (err) return reject(err);
+    //         resolve(result);
+    //       });
+    //     };
+    //
+    //     let transaction = args.shift();
+    //     if (transaction instanceof Transaction) {
+    //       const updatedTransaction: Transaction = new Transaction(
+    //         this.constructor.name,
+    //         propertyKey,
+    //         async () => {
+    //           originalMethod
+    //             .call(updatedTransaction.bindToTransaction(self), ...args)
+    //             .then(resolve)
+    //             .catch(reject);
+    //         },
+    //         data.length ? data : undefined
+    //       );
+    //
+    //       transaction.bindTransaction(updatedTransaction);
+    //       transaction.fire();
+    //     } else {
+    //       args.unshift(transaction);
+    //       transaction = new Transaction(
+    //         this.constructor.name,
+    //         propertyKey,
+    //         () => {
+    //           originalMethod
+    //             .call(transaction.bindToTransaction(self), ...args)
+    //             .then((result: any) => cb(undefined, result))
+    //             .catch(cb);
+    //         },
+    //         data.length ? data : undefined
+    //       );
+    //       Transaction.submit(transaction);
+    //     }
+    //   });
+    // };
+    //
+    // Object.defineProperty(methodWrapper, "name", {
+    //   value: propertyKey,
+    // });
+    // descriptor.value = methodWrapper;
   };
 }
 //

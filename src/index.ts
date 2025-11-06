@@ -1,3 +1,5 @@
+import { Metadata } from "@decaf-ts/decoration";
+
 export * from "./interfaces";
 export * from "./locks";
 export * from "./constants";
@@ -18,3 +20,7 @@ export * from "./types";
  * @memberOf module:transactions
  */
 export const VERSION = "##VERSION##";
+
+export const PACKAGE_NAME = "##PACKAGE##";
+
+Metadata.registerLibrary(PACKAGE_NAME, VERSION);

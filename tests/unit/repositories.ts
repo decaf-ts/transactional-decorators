@@ -1,7 +1,7 @@
 import { Callback, transactionalSuperCall } from "../../src";
 import { TestModelAsync } from "./TestModel";
 import { transactional } from "../../src";
-import { RamRepository } from "./RamRespository";
+import { RamRepository } from "./RamRepository";
 import { Model } from "@decaf-ts/decorator-validation";
 import { Repository } from "@decaf-ts/db-decorators";
 

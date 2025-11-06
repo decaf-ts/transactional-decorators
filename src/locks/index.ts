@@ -5,4 +5,4 @@
  */
 
 export * from "./Lock";
-export * from "./SyncronousLock";
+export * from "./SynchronousLock";

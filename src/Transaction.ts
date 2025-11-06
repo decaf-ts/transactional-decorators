@@ -1,13 +1,11 @@
 import { TransactionLock } from "./interfaces/TransactionLock";
-import { Reflection } from "@decaf-ts/reflection";
-import { Callback } from "./types";
-import { SyncronousLock } from "./locks/SyncronousLock";
-import {
-  DBKeys,
-  getAllPropertyDecoratorsRecursive,
-} from "@decaf-ts/db-decorators";
+import { SynchronousLock } from "./locks/SynchronousLock";
+import { DBKeys } from "@decaf-ts/db-decorators";
 import { getObjectName } from "./utils";
 import { TransactionalKeys } from "./constants";
+import "./overrides";
+import { Callback } from "./types";
+import { Metadata } from "@decaf-ts/decoration";
 
 /**
  * @description Core transaction management class
@@ -28,7 +26,7 @@ import { TransactionalKeys } from "./constants";
  *   }
  * );
  * Transaction.submit(transaction);
- * 
+ *
  * // Using the transactional decorator
  * class UserService {
  *   @transactional()
@@ -43,7 +41,7 @@ import { TransactionalKeys } from "./constants";
  *   participant T as Transaction
  *   participant L as TransactionLock
  *   participant O as Original Method
- *   
+ *
  *   C->>T: new Transaction(source, method, action)
  *   C->>T: Transaction.submit(transaction)
  *   T->>L: submit(transaction)
@@ -128,7 +126,7 @@ export class Transaction {
    * @return {TransactionLock} The current transaction lock implementation
    */
   static getLock(): TransactionLock {
-    if (!this.lock) this.lock = new SyncronousLock();
+    if (!this.lock) this.lock = new SynchronousLock();
     return this.lock;
   }
 
@@ -182,46 +180,79 @@ export class Transaction {
    * @return {any} The bound object with transaction-aware method wrappers
    */
   bindToTransaction(obj: any): any {
-    const transactionalMethods = getAllPropertyDecoratorsRecursive(
-      obj,
-      undefined,
-      TransactionalKeys.REFLECT
-    );
-    if (!transactionalMethods) return obj;
+    const transactionalMethods: string[] = Metadata.transactionals(
+      obj.constructor
+    ) as string[];
+    if (!transactionalMethods.length) return obj;
+    // const transactionalMethods = getAllPropertyDecoratorsRecursive(
+    //   obj,
+    //   undefined,
+    //   TransactionalKeys.REFLECT
+    // );
+    // if (!transactionalMethods) return obj;
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
-    const boundObj = Reflection.getAllProperties(obj).reduce(
-      (accum: any, k: string) => {
-        if (
-          Object.keys(transactionalMethods).indexOf(k) !== -1 &&
-          transactionalMethods[k].find(
-            (o) => o.key === TransactionalKeys.TRANSACTIONAL
-          )
-        )
-          accum[k] = (...args: any[]) =>
-            obj[k].call(obj.__originalObj || obj, self, ...args);
-        else if (k === "clazz" || k === "constructor") accum[k] = obj[k];
-        else if (typeof obj[k] === "function")
-          accum[k] = obj[k].bind(obj.__originalObj || obj);
-        else if (typeof obj[k] === "object" && obj[k].constructor) {
-          const decs = Reflection.getClassDecorators(
-            TransactionalKeys.REFLECT,
-            obj[k]
-          );
-          if (decs.find((e: any) => e.key === TransactionalKeys.TRANSACTIONAL))
-            accum[k] = self.bindToTransaction(obj[k]);
-          else accum[k] = obj[k];
-        } else accum[k] = obj[k];
+    const transactionProps: string[] = (
+      Metadata.properties(obj.constructor) || []
+    ).filter((p) => {
+      const type = Metadata.type(obj.constructor, p);
+      return Metadata.isTransactional(type);
+    });
 
-        return accum;
+    const boundObj = new Proxy(obj, {
+      get(target, prop, receiver) {
+        if (transactionalMethods.includes(prop as string))
+          return new Proxy(target[prop as keyof typeof target] as any, {
+            apply(methodTarget, thisArg, argArray) {
+              return Reflect.apply(
+                methodTarget,
+                thisArg,
+                // thisArg.__originalObj || thisArg,
+                argArray
+              );
+            },
+          });
+
+        if (transactionProps.includes(prop as string))
+          return self.bindToTransaction(target[prop as keyof typeof target]);
+
+        return Reflect.get(target, prop, receiver);
       },
-      {}
-    );
+    });
+    //
+    // const boundObj = Reflection.getAllProperties(obj).reduce(
+    //   (accum: any, k: string) => {
+    //     if (
+    //       Object.keys(transactionalMethods).indexOf(k) !== -1 &&
+    //       transactionalMethods[k].find(
+    //         (o) => o.key === TransactionalKeys.TRANSACTIONAL
+    //       )
+    //     )
+    //       accum[k] = (...args: any[]) =>
+    //         obj[k].call(obj.__originalObj || obj, self, ...args);
+    //     else if (k === "clazz" || k === "constructor") accum[k] = obj[k];
+    //     else if (typeof obj[k] === "function")
+    //       accum[k] = obj[k].bind(obj.__originalObj || obj);
+    //     else if (typeof obj[k] === "object" && obj[k].constructor) {
+    //       const decs = Reflection.getClassDecorators(
+    //         TransactionalKeys.REFLECT,
+    //         obj[k]
+    //       );
+    //       if (decs.find((e: any) => e.key === TransactionalKeys.TRANSACTIONAL))
+    //         accum[k] = self.bindToTransaction(obj[k]);
+    //       else accum[k] = obj[k];
+    //     } else accum[k] = obj[k];
+    //
+    //     return accum;
+    //   },
+    //   {}
+    // );
 
-    boundObj[DBKeys.ORIGINAL] = obj[DBKeys.ORIGINAL] || obj;
+    boundObj[DBKeys.ORIGINAL as keyof typeof boundObj] =
+      obj[DBKeys.ORIGINAL] || obj;
     boundObj.toString = () =>
-      getObjectName(boundObj[DBKeys.ORIGINAL]) +
+      getObjectName(boundObj[DBKeys.ORIGINAL as keyof typeof boundObj]) +
       " proxy for transaction " +
       this.id;
 
@@ -249,16 +280,5 @@ export class Transaction {
     return `${withId ? `[${this.id}]` : ""}[Transaction][${this.source}.${this.method}${
       withLog ? `]\nTransaction Log:\n${this.log.join("\n")}` : "]"
     }`;
-  }
-
-  /**
-   * @description Generates a reflection metadata key for transactions
-   * @summary Creates a prefixed reflection key for transaction-related metadata, ensuring proper namespacing
-   * @param {string} key - The base key to prefix with the transaction reflection namespace
-   * @return {string} The complete reflection key for transaction metadata
-   * @function key
-   */
-  static key(key: string) {
-    return TransactionalKeys.REFLECT + key;
   }
 }

@@ -1,149 +1,121 @@
+import { TestModelAsync } from "./TestModel";
+import { Injectables } from "@decaf-ts/injectable-decorators";
+import { GenericCaller, TransactionalRepository } from "./repositories";
+import { Repository } from "@decaf-ts/db-decorators";
+import { SynchronousLock, Transaction } from "../../src";
+import {
+  ConsumerRunner,
+  defaultComparer,
+} from "../../node_modules/@decaf-ts/utils/lib/tests/Consumer.cjs";
+
 jest.setTimeout(30000);
 if (process.env["GITLAB_CI"]) jest.setTimeout(3 * 30000);
 
 describe(`Transactional Context Test`, function () {
-  //
-  // const testModel = new TestModelAsync();
-  //
-  // beforeEach(() => {
-  //   Injectables.reset();
-  // });
-  //
-  it(`Fills Properties Nicely`, function (testFinished) {
-    // const testRepository: TransactionalRepository = new TransactionalRepository(1000, false);
-    //
-    // testRepository.create("testModel.id", testModel, (err?: Error, result?: TestModelAsync) => {
-    //   expect(err).toBeUndefined();
-    //   expect(result).toBeDefined();
-    //   if (result){
-    //     expect(result.id).toBeDefined();
-    //     expect(result.updatedOn).toBeDefined();
-    //     expect(result.createdOn).toBeDefined();
-    //   }
-    testFinished();
-    // });
+  const testModel = new TestModelAsync({
+    id: "" + Date.now(),
+    name: "Test Name",
+    address: "123 Test Street",
   });
-  //
-  // it(`Schedules transactions properly`, (testFinished) => {
-  //   const testRepository: Repository<TestModelAsync> = new TransactionalRepository(200, false);
-  //
-  //   const {ConsumerRunner, defaultComparer} = require('../../bin/Consumer');
-  //
-  //   const count = 5 , times = 5
-  //
-  //   const onBegin = jest.fn()
-  //   const onEnd = jest.fn()
-  //
-  //   const onBeginPromise = async () => {
-  //     return Promise.resolve(onBegin())
-  //   }
-  //
-  //   const onEndPromise = async (err?: Error) => {
-  //     return Promise.resolve(onEnd(err))
-  //   }
-  //
-  //   Transaction.setLock(new SyncronousLock(1, onBeginPromise, onEndPromise))
-  //
-  //   const lock = Transaction.getLock();
-  //
-  //   const submitTransactionMock = jest.spyOn(lock, "submit")
-  //   const releaseTransactionMock = jest.spyOn(lock, "release")
-  //
-  //   const consumerRunner = new ConsumerRunner("create", true, (identifier: string, callback: Callback) => {
-  //
-  //     const tm = new TestModelAsync();
-  //     testRepository.create(Date.now(), tm, (err: Err, model?: TestModelAsync) => {
-  //       try {
-  //         expect(err).toBeUndefined();
-  //         expect(model).toBeDefined();
-  //       } catch (e){
-  //         //@ts-ignore
-  //         return callback(e)
-  //       }
-  //       callback(err, model);
-  //     });
-  //   }, defaultComparer);
-  //
-  //   consumerRunner.run(count, 100, times, true, (err: Error) => {
-  //     if (err)
-  //       return testFinished(err)
-  //     try {
-  //       expect(submitTransactionMock).toHaveBeenCalledTimes(count * times)
-  //       expect(releaseTransactionMock).toHaveBeenCalledTimes(count * times)
-  //       expect(onBegin).toHaveBeenCalledTimes(count * times)
-  //       expect(onEnd).toHaveBeenCalledTimes(count * times)
-  //     } catch (e: any) {
-  //       return testFinished(e)
-  //     }
-  //
-  //     testFinished()
-  //   })
-  // });
-  //
-  // describe("Handles different transactional methods within the same transaction", () => {
-  //
-  //   beforeEach(() => {
-  //     Injectables.reset();
-  //     jest.restoreAllMocks()
-  //     jest.resetAllMocks()
-  //   })
-  //
-  //   it("Handles calls to multiple transactional methods within the same Async transactional function", (callback) => {
-  //
-  //     const caller = new GenericCaller();
-  //
-  //     const tm = new TestModelAsync();
-  //
-  //     const lock = Transaction.getLock();
-  //
-  //     const mockSubmit = jest.spyOn(lock, "submit")
-  //     const mockRelease = jest.spyOn(lock, "release")
-  //
-  //     const mockBindTransaction = jest.spyOn(Transaction.prototype, "bindTransaction")
-  //
-  //     caller.runAsync(tm, (err: Error, model1?: TestModelAsync, model2?: TestModelAsync) => {
-  //       if (err || !model1 || !model2)
-  //         return callback(err || "missing results")
-  //
-  //       try {
-  //         expect(mockSubmit).toHaveBeenCalledTimes(1)
-  //         expect(mockRelease).toHaveBeenCalledTimes(1)
-  //         expect(mockBindTransaction).toHaveBeenCalledTimes(4)
-  //       } catch (e: any) {
-  //         return callback(e)
-  //       }
-  //
-  //       callback()
-  //     })
-  //   })
-  //   it("Handles calls to multiple transactional methods within the same Promise Based transactional function", (callback) => {
-  //
-  //     const caller = new GenericCaller();
-  //
-  //     const tm = new TestModelAsync();
-  //
-  //     const lock = Transaction.getLock();
-  //
-  //     const mockSubmit = jest.spyOn(lock, "submit")
-  //     const mockRelease = jest.spyOn(lock, "release")
-  //
-  //     const mockBindTransaction = jest.spyOn(Transaction.prototype, "bindTransaction")
-  //
-  //     caller.runPromise(tm).then((result: {model1: TestModelAsync, model2: TestModelAsync}) => {
-  //       try {
-  //         const {model1, model2} = result;
-  //         expect(model1).toBeDefined();
-  //         expect(model2).toBeDefined();
-  //         expect(mockSubmit).toHaveBeenCalledTimes(1)
-  //         expect(mockRelease).toHaveBeenCalledTimes(1)
-  //         expect(mockBindTransaction).toHaveBeenCalledTimes(5)
-  //       } catch (e: any) {
-  //         return callback(e)
-  //       }
-  //       callback()
-  //     }).catch(callback)
-  //   })
-  // })
+
+  beforeEach(() => {
+    Injectables.reset();
+  });
+
+  it(`Fills Properties Nicely`, async () => {
+    const testRepository: TransactionalRepository = new TransactionalRepository(
+      1000,
+      false
+    );
+
+    const result = await testRepository.create(testModel);
+    expect(result).toBeDefined();
+    if (result) {
+      expect(result.id).toBeDefined();
+      expect(result.updatedOn).toBeDefined();
+      expect(result.createdOn).toBeDefined();
+    }
+  });
+
+  it(`Schedules transactions properly`, async () => {
+    const testRepository: Repository<TestModelAsync> =
+      new TransactionalRepository(200, false);
+
+    const count = 5,
+      times = 5;
+
+    const onBegin = jest.fn();
+    const onEnd = jest.fn();
+
+    const onBeginPromise = async () => {
+      return Promise.resolve(onBegin());
+    };
+
+    const onEndPromise = async (err?: Error) => {
+      return Promise.resolve(onEnd(err));
+    };
+
+    Transaction.setLock(new SynchronousLock(1, onBeginPromise, onEndPromise));
+
+    const lock = Transaction.getLock();
+
+    const submitTransactionMock = jest.spyOn(lock, "submit");
+    const releaseTransactionMock = jest.spyOn(lock, "release");
+
+    const consumerRunner = new ConsumerRunner(
+      "create",
+      async (identifier: number) => {
+        const tm = new TestModelAsync({
+          id: "" + identifier,
+        });
+        const created = await testRepository.create(tm);
+        expect(created).toBeDefined();
+        return created;
+      },
+      defaultComparer
+    );
+
+    await consumerRunner.run(count, 100, times, true);
+    expect(submitTransactionMock).toHaveBeenCalledTimes(count * times);
+    expect(releaseTransactionMock).toHaveBeenCalledTimes(count * times);
+    expect(onBegin).toHaveBeenCalledTimes(count * times);
+    expect(onEnd).toHaveBeenCalledTimes(count * times);
+  });
+
+  describe("Handles different transactional methods within the same transaction", () => {
+    beforeEach(() => {
+      Injectables.reset();
+      jest.restoreAllMocks();
+      jest.resetAllMocks();
+    });
+
+    it("Handles calls to multiple transactional methods within the same transactional function", async () => {
+      const caller = new GenericCaller();
+
+      const tm = new TestModelAsync({
+        id: "" + Date.now(),
+      });
+
+      const lock = Transaction.getLock();
+
+      const mockSubmit = jest.spyOn(lock, "submit");
+      const mockRelease = jest.spyOn(lock, "release");
+
+      const mockBindTransaction = jest.spyOn(
+        Transaction.prototype,
+        "bindTransaction"
+      );
+
+      const result = await caller.runPromise(tm);
+
+      const { created1, created2 } = result;
+      expect(created1).toBeDefined();
+      expect(created2).toBeDefined();
+      expect(mockSubmit).toHaveBeenCalledTimes(1);
+      expect(mockRelease).toHaveBeenCalledTimes(1);
+      expect(mockBindTransaction).toHaveBeenCalledTimes(5);
+    });
+  });
   // describe("Handles onBegin and onEnd methods", () => {
   //
   //   let onBegin: any, onEnd: any
