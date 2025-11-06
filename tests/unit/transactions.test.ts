@@ -9,8 +9,8 @@ import {
 } from "../../node_modules/@decaf-ts/utils/lib/tests/Consumer.cjs";
 import { Logging, LogLevel } from "@decaf-ts/logging";
 
-jest.setTimeout(300000);
-if (process.env["GITLAB_CI"]) jest.setTimeout(3 * 300000);
+jest.setTimeout(5000);
+if (process.env["GITLAB_CI"]) jest.setTimeout(3 * 5000);
 
 Logging.setConfig({ level: LogLevel.silly });
 
