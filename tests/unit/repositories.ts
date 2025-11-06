@@ -1,4 +1,4 @@
-import { Callback, transactionalSuperCall } from "../../src";
+import { Callback } from "../../src";
 import { TestModelAsync } from "./TestModel";
 import { transactional } from "../../src";
 import { RamRepository } from "./RamRepository";
@@ -24,27 +24,27 @@ export class TransactionalRepository extends RamRepository<TestModelAsync> {
 
   @transactional()
   async create(model: TestModelAsync): Promise<TestModelAsync> {
-    const result = await transactionalSuperCall(super.create.bind(this), model);
+    const result = await super.create(model);
     await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
     return result;
   }
 
   @transactional()
   async delete(key: any) {
-    const result = await transactionalSuperCall(super.delete.bind(this), key);
+    const result = await super.delete(key);
     await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
     return result;
   }
 
   async read(key: any) {
-    const result = await transactionalSuperCall(super.read.bind(this), key);
+    const result = await super.read(key);
     await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
     return result;
   }
 
   @transactional()
   async update(model: TestModelAsync) {
-    const result = await transactionalSuperCall(super.update.bind(this), model);
+    const result = await super.update(model);
     await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
     return result;
   }
@@ -68,33 +68,32 @@ export class OtherTransactionalRepository extends RamRepository<TestModelAsync> 
 
   @transactional()
   async create(model: TestModelAsync): Promise<TestModelAsync> {
-    const result = await transactionalSuperCall(super.create.bind(this), model);
+    const result = await super.create(model);
     await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
     return result;
   }
 
   @transactional()
   async delete(key: any) {
-    const result = await transactionalSuperCall(super.delete.bind(this), key);
+    const result = await super.delete(key);
     await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
     return result;
   }
 
   async read(key: any) {
-    const result = await transactionalSuperCall(super.read.bind(this), key);
+    const result = await super.read(key);
     await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
     return result;
   }
 
   @transactional()
   async update(model: TestModelAsync) {
-    const result = await transactionalSuperCall(super.update.bind(this), model);
+    const result = await super.update(model);
     await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
     return result;
   }
 }
 
-// @Transactional()
 export class GenericCaller {
   @required()
   @prop()

@@ -265,18 +265,3 @@ export function transactional(...data: any[]) {
 //     descriptor.value = methodWrapper;
 //   };
 // }
-
-/**
- * @description Utility for handling super calls in transactional methods
- * @summary Wraps super method calls with the current transaction context when the super's method is also transactional, ensuring transaction continuity through the inheritance chain
- * @param {Function} method - The super method (must be bound to the proper this), e.g., super.create.bind(this)
- * @param {any[]} args - The arguments to call the method with
- * @return {any} The result of the super method call
- * @function transactionalSuperCall
- * @memberOf module:transactions
- */
-export function transactionalSuperCall(method: any, ...args: any) {
-  const lock = Transaction.getLock();
-  const currentTransaction = lock.currentTransaction;
-  return method(currentTransaction, ...args);
-}
