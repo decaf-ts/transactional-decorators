@@ -59,6 +59,7 @@ export class Transaction extends LoggedClass {
   private readonly metadata?: any[];
 
   private static lock: TransactionLock;
+  private static readonly contexts = new WeakMap<object, Transaction>();
 
   constructor(
     source: string,
@@ -202,8 +203,8 @@ export class Transaction extends LoggedClass {
             apply(methodTarget, thisArg, argArray) {
               return Reflect.apply(
                 methodTarget,
-                thisArg.__originalObj || thisArg,
-                argArray
+                thisArg,
+                [self, ...argArray]
               );
             },
           });
@@ -249,6 +250,10 @@ export class Transaction extends LoggedClass {
       getObjectName(boundObj[DBKeys.ORIGINAL as keyof typeof boundObj]) +
       " proxy for transaction " +
       this.id;
+    (boundObj as any).__transactionProxy = true;
+    (boundObj as any).__transactionTarget =
+      (obj as any).__transactionTarget || obj;
+    Transaction.contexts.set(boundObj, self);
 
     return boundObj;
   }
@@ -274,5 +279,12 @@ export class Transaction extends LoggedClass {
     return `${withId ? `[${this.id}]` : ""}[Transaction][${this.source}.${this.method}${
       withLog ? `]\nTransaction Log:\n${this.logs.join("\n")}` : "]"
     }`;
+  }
+
+  static contextTransaction(context: any): Transaction | undefined {
+    if (!context || !(context as any).__transactionProxy) {
+      return undefined;
+    }
+    return this.contexts.get(context);
   }
 }

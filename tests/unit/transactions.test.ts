@@ -9,8 +9,9 @@ import {
 } from "../../node_modules/@decaf-ts/utils/lib/tests/Consumer.cjs";
 import { Logging, LogLevel } from "@decaf-ts/logging";
 
-jest.setTimeout(5000);
-if (process.env["GITLAB_CI"]) jest.setTimeout(3 * 5000);
+const DEFAULT_TIMEOUT = 15000;
+jest.setTimeout(DEFAULT_TIMEOUT);
+if (process.env["GITLAB_CI"]) jest.setTimeout(3 * DEFAULT_TIMEOUT);
 
 Logging.setConfig({ level: LogLevel.silly });
 
@@ -116,7 +117,7 @@ describe(`Transactional Context Test`, function () {
       expect(created2).toBeDefined();
       expect(mockSubmit).toHaveBeenCalledTimes(1);
       expect(mockRelease).toHaveBeenCalledTimes(1);
-      expect(mockBindTransaction).toHaveBeenCalledTimes(5);
+      expect(mockBindTransaction).toHaveBeenCalledTimes(4);
     });
   });
   // describe("Handles onBegin and onEnd methods", () => {

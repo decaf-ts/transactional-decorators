@@ -62,8 +62,19 @@ export function transactional(...data: any[]) {
             return err ? reject(err) : resolve(result);
           }
 
-          const transaction = argArray.shift();
-          if (transaction instanceof Transaction) {
+          const candidate = argArray.shift();
+          if (
+            candidate !== undefined &&
+            !(candidate instanceof Transaction)
+          )
+            argArray.unshift(candidate);
+
+          const activeTransaction =
+            candidate instanceof Transaction
+              ? candidate
+              : Transaction.contextTransaction(thisArg);
+
+          if (activeTransaction) {
             const updatedTransaction: Transaction = new Transaction(
               target.name,
               propertyKey,
@@ -82,10 +93,9 @@ export function transactional(...data: any[]) {
               },
               data.length ? data : undefined
             );
-            transaction.bindTransaction(updatedTransaction);
-            transaction.fire();
+            activeTransaction.bindTransaction(updatedTransaction);
+            activeTransaction.fire();
           } else {
-            argArray.unshift(transaction);
             const newTransaction = new Transaction(
               target.name,
               propertyKey,
