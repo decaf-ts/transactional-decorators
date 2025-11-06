@@ -2,9 +2,15 @@ import { Callback } from "../../src";
 import { TestModelAsync } from "./TestModel";
 import { transactional } from "../../src";
 import { RamRepository } from "./RamRepository";
-import { Model, required } from "@decaf-ts/decorator-validation";
-import { Repository } from "@decaf-ts/db-decorators";
+import {
+  Constructor,
+  model,
+  Model,
+  required,
+} from "@decaf-ts/decorator-validation";
+import { findModelId, IRepository, Repository } from "@decaf-ts/db-decorators";
 import { prop } from "@decaf-ts/decoration";
+import { sf } from "@decaf-ts/logging";
 
 export class TransactionalRepository extends RamRepository<TestModelAsync> {
   private readonly timeout: number;
@@ -115,177 +121,104 @@ export class GenericCaller {
   }
 }
 
-export function managerCallIterator<T extends Model>(
-  this: Repository<T>,
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-  func: Function,
-  ...args: (any | Callback)[]
-) {
-  if (!args || args.length < 1) throw new Error("Needs at least a callback");
-  const callback: Callback = args.pop();
+export class DBMock<T extends Model> implements IRepository<T> {
+  private _cache: Record<string, any> = {};
 
-  if (!args.every((a) => Array.isArray(a) && a.length === args[0].length))
-    return callback(new Error(`Invalid argument length`));
+  constructor(private timeout = 200) {}
+  pk: keyof T;
 
-  // eslint-disable-next-line @typescript-eslint/no-this-alias
-  const self = this;
+  @transactional()
+  async create(model: T): Promise<T> {
+    const key: string = findModelId(model) as string;
+    await new Promise<any>((resolve) => setTimeout(resolve, this.timeout));
+    if (key in this._cache)
+      throw new Error(sf("Record with key {0} already exists", key));
+    this._cache[key] = model;
+    return model;
+  }
 
-  const iterator = function (accum: T[], ...argz: any[]) {
-    const callback: Callback = argz.pop();
-    const callArgs = argz.map((a) => a.shift()).filter((a) => !!a);
+  async read(key: any): Promise<T> {
+    await new Promise<any>((resolve) => setTimeout(resolve, this.timeout / 4));
+    if (!(key in this._cache))
+      throw new Error(sf("Record with key {0} does not exist", key));
+    return this._cache[key];
+  }
 
-    if (!callArgs.length) return callback(undefined, accum);
+  @transactional()
+  async update(model: T): Promise<T> {
+    const key: string = findModelId(model) as string;
+    await new Promise<any>((resolve) => setTimeout(resolve, this.timeout));
+    if (key in this._cache)
+      throw new Error(sf("Record with key {0} already exists", key));
+    this._cache[key] = model;
+    return model;
+  }
 
-    try {
-      func.call(self, ...callArgs, (err: Error, results: T) => {
-        if (err) return callback(err);
-        accum.push(results);
-        iterator(accum, ...argz, callback);
-      });
-    } catch (e) {
-      return callback(e as Error);
-    }
-  };
+  @transactional()
+  async delete(key: any): Promise<T> {
+    await new Promise<any>((resolve) => setTimeout(resolve, this.timeout / 4));
+    if (!(key in this._cache))
+      throw new Error(sf("Record with key {0} does not exist", key));
+    const cached = this._cache[key];
+    delete this._cache[key];
+    return cached;
+  }
 
-  iterator([], ...args, (err: Error, results: any[]) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    err ? callback(err) : callback(undefined, results);
-  });
+  readonly class: Constructor<T>;
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  createAll(models: T[], ...args: any[]): Promise<T[]> {
+    return Promise.resolve([]);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  deleteAll(keys: string[] | number[], ...args: any[]): Promise<T[]> {
+    return Promise.resolve([]);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  readAll(keys: string[] | number[], ...args: any[]): Promise<T[]> {
+    return Promise.resolve([]);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  updateAll(models: T[], ...args: any[]): Promise<T[]> {
+    return Promise.resolve([]);
+  }
 }
-//
-// // @Transactional()
-// export class DBMock<T extends Model> implements IRepository<T> {
-//   private _cache: Record<string, any> = {};
-//
-//   constructor(model: Constructor<T>, private timeout = 200) {}
-//
-//   @transactional()
-//   async create(model: T): Promise<T> {
-//     // eslint-disable-next-line @typescript-eslint/no-this-alias
-//     const self = this;
-//     return new Promise<T>((resolve, reject) => {
-//       const key = findModelId(model);
-//       setTimeout(() => {
-//         if (key in self._cache)
-//           return reject(
-//             new Error(sf("Record with key {0} already exists", key))
-//           );
-//         self._cache[key] = model;
-//         resolve(model);
-//       }, self.timeout);
-//     });
-//   }
-//
-//   async read(key: any): Promise<T> {
-//     // eslint-disable-next-line @typescript-eslint/no-this-alias
-//     const self = this;
-//     return new Promise<T>((resolve, reject) => {
-//       setTimeout(() => {
-//         if (!(key in self._cache))
-//           return reject(
-//             new Error(sf("Record with key {0} does not exist", key))
-//           );
-//         resolve(self._cache[key]);
-//       }, self.timeout / 4);
-//     });
-//   }
-//
-//   @transactional()
-//   async update(model: T): Promise<T> {
-//     // eslint-disable-next-line @typescript-eslint/no-this-alias
-//     const self = this;
-//     return new Promise<T>((resolve, reject) => {
-//       const key = findModelId(model);
-//       setTimeout(() => {
-//         if (key in self._cache)
-//           return reject(
-//             new Error(sf("Record with key {0} already exists", key))
-//           );
-//         self._cache[key] = model;
-//         resolve(model);
-//       }, self.timeout);
-//     });
-//   }
-//
-//   @transactional()
-//   async delete(key: any): Promise<T> {
-//     // eslint-disable-next-line @typescript-eslint/no-this-alias
-//     const self = this;
-//     return new Promise<T>((resolve, reject) => {
-//       setTimeout(() => {
-//         if (!(key in self._cache))
-//           return reject(
-//             new Error(sf("Record with key {0} does not exist", key))
-//           );
-//         const _cached = self._cache[key];
-//         delete self._cache[key];
-//         resolve(_cached);
-//       }, self.timeout / 4);
-//     });
-//   }
-//
-//   readonly cache: DataCache = new DataCache();
-//   readonly class: Constructor<T>;
-//
-//   createAll(models: T[], ...args: any[]): Promise<T[]> {
-//     return Promise.resolve([]);
-//   }
-//
-//   deleteAll(keys: string[] | number[], ...args: any[]): Promise<T[]> {
-//     return Promise.resolve([]);
-//   }
-//
-//   readAll(keys: string[] | number[], ...args: any[]): Promise<T[]> {
-//     return Promise.resolve([]);
-//   }
-//
-//   updateAll(models: T[], ...args: any[]): Promise<T[]> {
-//     return Promise.resolve([]);
-//   }
-// }
-//
-// export class DBRepo<T extends Model> extends Repository<T> {
-//   private db = new DBMock();
-//
-//   constructor(clazz: { new (): T }) {
-//     super(clazz);
-//   }
-//
-//   @transactional()
-//   async create(model: T) {
-//     return this.db.create(model);
-//   }
-//
-//   @transactional()
-//   async delete(key: any) {
-//     return this.db.delete(key);
-//   }
-//
-//   async read(key: any) {
-//     return this.db.read(key);
-//   }
-//
-//   @transactional()
-//   async update(model: T) {
-//     return this.db.update(model);
-//   }
-//
-//   @transactional()
-//   createAll(...args: (any | Callback)[]): void {
-//     const callback: Callback = args.pop();
-//     if (!callback) throw new Error("No callback");
-//     const self = this;
-//     // all.call(self, "Trying to create {1} records under the {0} table", "generic", args[0].length);
-//
-//     managerCallIterator.call(
-//       this as any,
-//       this.create.bind(this),
-//       ...args,
-//       (err: Err, models: T[]) => {
-//         if (err || !models || !models.length) return callback(err);
-//         // all.call(self, "{1} records created under the {0} table", "generic", models.length);
-//         callback(undefined, models);
-//       }
-//     );
-//   }
-// }
+
+export class DBRepo<T extends Model<boolean>> extends Repository<T> {
+  private db = new DBMock<T>();
+
+  constructor(clazz: Constructor<T>) {
+    super(clazz);
+  }
+
+  @transactional()
+  async create(model: T) {
+    return this.db.create(model);
+  }
+
+  @transactional()
+  async delete(key: any) {
+    return this.db.delete(key);
+  }
+
+  async read(key: any) {
+    return this.db.read(key);
+  }
+
+  @transactional()
+  async update(model: T) {
+    return this.db.update(model);
+  }
+
+  @transactional()
+  async createAll(models: T[]) {
+    const result = [];
+    for (const model of models) {
+      result.push(await this.create(model));
+    }
+    return result;
+  }
+}

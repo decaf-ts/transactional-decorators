@@ -84,31 +84,31 @@ export class Transaction extends LoggedClass {
    * @param {any[]} args - Arguments to pass to the method. Last one must be the callback function
    * @return {void}
    */
-  static push(
+  static async push(
     issuer: any,
     callbackMethod: (...argzz: (any | Callback)[]) => void,
     ...args: (any | Callback)[]
   ) {
-    const callback: Callback = args.pop();
-    if (!callback || typeof callback !== "function")
-      throw new Error("Missing callback");
-    const cb = (err?: Error, ...args: any[]) => {
-      Transaction.getLock()
-        .release(err)
-        .then(() => callback(err, ...args));
-    };
-    const transaction: Transaction = new Transaction(
-      issuer.constructor.name,
-      callbackMethod.name ? getObjectName(callbackMethod) : "Anonymous",
-      () => {
-        return callbackMethod.call(
-          transaction.bindToTransaction(issuer),
-          ...args,
-          cb
-        );
+    return new Promise<any>((resolve, reject) => {
+      async function cb(err?: Error, ...args: any[]) {
+        await Transaction.getLock().release(err);
+        if (err) return reject(err);
+        return resolve(args.length === 1 ? args[0] : args);
       }
-    );
-    Transaction.getLock().submit(transaction);
+
+      const transaction: Transaction = new Transaction(
+        issuer.constructor.name,
+        callbackMethod.name ? getObjectName(callbackMethod) : "Anonymous",
+        () => {
+          return callbackMethod.call(
+            transaction.bindToTransaction(issuer),
+            ...args,
+            cb
+          );
+        }
+      );
+      Transaction.getLock().submit(transaction);
+    });
   }
 
   /**
@@ -201,11 +201,7 @@ export class Transaction extends LoggedClass {
         if (transactionalMethods.includes(prop as string))
           return new Proxy(target[prop as keyof typeof target] as any, {
             apply(methodTarget, thisArg, argArray) {
-              return Reflect.apply(
-                methodTarget,
-                thisArg,
-                [self, ...argArray]
-              );
+              return Reflect.apply(methodTarget, thisArg, [self, ...argArray]);
             },
           });
 
