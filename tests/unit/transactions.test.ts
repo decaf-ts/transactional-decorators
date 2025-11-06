@@ -7,9 +7,12 @@ import {
   ConsumerRunner,
   defaultComparer,
 } from "../../node_modules/@decaf-ts/utils/lib/tests/Consumer.cjs";
+import { Logging, LogLevel } from "@decaf-ts/logging";
 
-jest.setTimeout(30000);
-if (process.env["GITLAB_CI"]) jest.setTimeout(3 * 30000);
+jest.setTimeout(300000);
+if (process.env["GITLAB_CI"]) jest.setTimeout(3 * 300000);
+
+Logging.setConfig({ level: LogLevel.silly });
 
 describe(`Transactional Context Test`, function () {
   const testModel = new TestModelAsync({

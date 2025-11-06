@@ -69,7 +69,9 @@ export class SynchronousLock extends LoggedClass implements TransactionLock {
     self.lock.acquire().then(async () => {
       self.currentTransaction = transaction;
       self.lock.release();
-      if (self.onBegin) await self.onBegin();
+      if (self.onBegin) {
+        await self.onBegin();
+      }
       log.silly(
         `Starting transaction ${transaction.id}. ${this.pendingTransactions.length} remaining...`
       );
@@ -93,14 +95,18 @@ export class SynchronousLock extends LoggedClass implements TransactionLock {
     this.currentTransaction = undefined;
     this.lock.release();
 
-    if (this.onEnd) await this.onEnd(err);
+    if (this.onEnd) {
+      await this.onEnd(err);
+    }
 
     await this.lock.acquire();
 
     if (this.pendingTransactions.length > 0) {
       const transaction = this.pendingTransactions.shift() as Transaction;
 
-      const cb = () => this.fireTransaction.call(this, transaction);
+      const cb = () => {
+        return this.fireTransaction.call(this, transaction);
+      };
       log.silly(`Releasing transaction lock on transaction ${transaction.id}`);
       if (
         typeof (globalThis as unknown as { window: any }).window === "undefined"

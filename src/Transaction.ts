@@ -186,18 +186,11 @@ export class Transaction extends LoggedClass {
       obj.constructor
     ) as string[];
     if (!transactionalMethods.length) return obj;
-    // const transactionalMethods = getAllPropertyDecoratorsRecursive(
-    //   obj,
-    //   undefined,
-    //   TransactionalKeys.REFLECT
-    // );
-    // if (!transactionalMethods) return obj;
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
-    const transactionProps: string[] = (
-      Metadata.properties(obj.constructor) || []
-    ).filter((p) => {
+    const props = Metadata.properties(obj.constructor) || [];
+    const transactionProps: string[] = props.filter((p) => {
       const type = Metadata.type(obj.constructor, p);
       return Metadata.isTransactional(type);
     });
@@ -209,8 +202,7 @@ export class Transaction extends LoggedClass {
             apply(methodTarget, thisArg, argArray) {
               return Reflect.apply(
                 methodTarget,
-                thisArg,
-                // thisArg.__originalObj || thisArg,
+                thisArg.__originalObj || thisArg,
                 argArray
               );
             },

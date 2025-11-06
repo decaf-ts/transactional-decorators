@@ -2,8 +2,9 @@ import { Callback, transactionalSuperCall } from "../../src";
 import { TestModelAsync } from "./TestModel";
 import { transactional } from "../../src";
 import { RamRepository } from "./RamRepository";
-import { Model } from "@decaf-ts/decorator-validation";
+import { Model, required } from "@decaf-ts/decorator-validation";
 import { Repository } from "@decaf-ts/db-decorators";
+import { prop } from "@decaf-ts/decoration";
 
 export class TransactionalRepository extends RamRepository<TestModelAsync> {
   private readonly timeout: number;
@@ -23,65 +24,29 @@ export class TransactionalRepository extends RamRepository<TestModelAsync> {
 
   @transactional()
   async create(model: TestModelAsync): Promise<TestModelAsync> {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this;
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise<TestModelAsync>(async (resolve, reject) => {
-      let result;
-      try {
-        result = await transactionalSuperCall(super.create.bind(this), model);
-      } catch (e: any) {
-        return reject(e);
-      }
-      setTimeout(() => resolve(result), self.getTimeout());
-    });
+    const result = await transactionalSuperCall(super.create.bind(this), model);
+    await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
+    return result;
   }
 
   @transactional()
   async delete(key: any) {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this;
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise<TestModelAsync>(async (resolve, reject) => {
-      let result;
-      try {
-        result = await transactionalSuperCall(super.delete.bind(this), key);
-      } catch (e: any) {
-        return reject(e);
-      }
-      setTimeout(() => resolve(result), self.getTimeout());
-    });
+    const result = await transactionalSuperCall(super.delete.bind(this), key);
+    await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
+    return result;
   }
 
   async read(key: any) {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this;
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise<TestModelAsync>(async (resolve, reject) => {
-      let result;
-      try {
-        result = await transactionalSuperCall(super.read.bind(this), key);
-      } catch (e: any) {
-        return reject(e);
-      }
-      setTimeout(() => resolve(result), self.getTimeout());
-    });
+    const result = await transactionalSuperCall(super.read.bind(this), key);
+    await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
+    return result;
   }
 
   @transactional()
-  update(model: TestModelAsync) {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this;
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise<TestModelAsync>(async (resolve, reject) => {
-      let result;
-      try {
-        result = await transactionalSuperCall(super.update.bind(this), model);
-      } catch (e: any) {
-        return reject(e);
-      }
-      setTimeout(() => resolve(result), self.getTimeout());
-    });
+  async update(model: TestModelAsync) {
+    const result = await transactionalSuperCall(super.update.bind(this), model);
+    await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
+    return result;
   }
 }
 
@@ -103,75 +68,43 @@ export class OtherTransactionalRepository extends RamRepository<TestModelAsync> 
 
   @transactional()
   async create(model: TestModelAsync): Promise<TestModelAsync> {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this;
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise<TestModelAsync>(async (resolve, reject) => {
-      let result;
-      try {
-        result = await transactionalSuperCall(super.create.bind(this), model);
-      } catch (e: any) {
-        return reject(e);
-      }
-      setTimeout(() => resolve(result), self.getTimeout());
-    });
+    const result = await transactionalSuperCall(super.create.bind(this), model);
+    await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
+    return result;
   }
 
   @transactional()
   async delete(key: any) {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this;
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise<TestModelAsync>(async (resolve, reject) => {
-      let result;
-      try {
-        result = await transactionalSuperCall(super.delete.bind(this), key);
-      } catch (e: any) {
-        return reject(e);
-      }
-      setTimeout(() => resolve(result), self.getTimeout());
-    });
+    const result = await transactionalSuperCall(super.delete.bind(this), key);
+    await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
+    return result;
   }
 
   async read(key: any) {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this;
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise<TestModelAsync>(async (resolve, reject) => {
-      let result;
-      try {
-        result = await transactionalSuperCall(super.read.bind(this), key);
-      } catch (e: any) {
-        return reject(e);
-      }
-      setTimeout(() => resolve(result), self.getTimeout());
-    });
+    const result = await transactionalSuperCall(super.read.bind(this), key);
+    await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
+    return result;
   }
 
   @transactional()
-  update(model: TestModelAsync) {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this;
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise<TestModelAsync>(async (resolve, reject) => {
-      let result;
-      try {
-        result = await transactionalSuperCall(super.update.bind(this), model);
-      } catch (e: any) {
-        return reject(e);
-      }
-      setTimeout(() => resolve(result), self.getTimeout());
-    });
+  async update(model: TestModelAsync) {
+    const result = await transactionalSuperCall(super.update.bind(this), model);
+    await new Promise((resolve) => setTimeout(resolve, this.getTimeout()));
+    return result;
   }
 }
 
 // @Transactional()
 export class GenericCaller {
+  @required()
+  @prop()
   private repo1: TransactionalRepository = new TransactionalRepository(
     200,
     false
   );
 
+  @required()
+  @prop()
   private repo2: OtherTransactionalRepository =
     new OtherTransactionalRepository(300, true);
 
