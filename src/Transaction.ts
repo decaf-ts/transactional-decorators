@@ -1,11 +1,10 @@
 import { TransactionLock } from "./interfaces/TransactionLock";
 import { SynchronousLock } from "./locks/SynchronousLock";
 import { DBKeys } from "@decaf-ts/db-decorators";
-import { getObjectName } from "./utils";
-import { TransactionalKeys } from "./constants";
 import "./overrides";
 import { Callback } from "./types";
 import { Metadata } from "@decaf-ts/decoration";
+import { LoggedClass, getObjectName } from "@decaf-ts/logging";
 
 /**
  * @description Core transaction management class
@@ -51,12 +50,12 @@ import { Metadata } from "@decaf-ts/decoration";
  *   T->>L: release(error?)
  *   L-->>C: Return result/error
  */
-export class Transaction {
+export class Transaction extends LoggedClass {
   readonly id: number;
   protected action?: () => any;
   readonly method?: string;
   readonly source?: string;
-  readonly log: string[];
+  readonly logs: string[];
   private readonly metadata?: any[];
 
   private static lock: TransactionLock;
@@ -67,10 +66,11 @@ export class Transaction {
     action?: () => any,
     metadata?: any[]
   ) {
+    super();
     this.id = Date.now();
     this.action = action;
     this.method = method;
-    this.log = [[this.id, source, method].join(" | ")];
+    this.logs = [[this.id, source, method].join(" | ")];
     this.source = source;
     this.metadata = metadata;
   }
@@ -166,8 +166,10 @@ export class Transaction {
    * @return {void}
    */
   bindTransaction(nextTransaction: Transaction) {
-    // all(`Binding the {0} to {1}`, nextTransaction, this);
-    this.log.push(...nextTransaction.log);
+    this.log
+      .for(this.bindTransaction)
+      .silly(`Binding the ${nextTransaction.toString()} to ${this}`);
+    this.logs.push(...nextTransaction.logs);
     nextTransaction.bindTransaction = this.bindToTransaction.bind(this);
     nextTransaction.bindToTransaction = this.bindToTransaction.bind(this);
     this.action = nextTransaction.action;
@@ -276,9 +278,9 @@ export class Transaction {
    * @param {boolean} [withLog=false] - Whether to include the transaction log in the output
    * @return {string} A string representation of the transaction
    */
-  toString(withId = true, withLog = false) {
+  override toString(withId = true, withLog = false) {
     return `${withId ? `[${this.id}]` : ""}[Transaction][${this.source}.${this.method}${
-      withLog ? `]\nTransaction Log:\n${this.log.join("\n")}` : "]"
+      withLog ? `]\nTransaction Log:\n${this.logs.join("\n")}` : "]"
     }`;
   }
 }
