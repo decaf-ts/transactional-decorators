@@ -10,8 +10,12 @@ export class TransactionalRepository extends RamRepository<TestModelAsync> {
   private readonly timeout: number;
   private readonly isRandom: boolean;
 
-  constructor(timeout: number, isRandom: boolean = false) {
-    super(TestModelAsync);
+  constructor(
+    timeout: number,
+    isRandom: boolean = false,
+    ram: Record<string, any> = {}
+  ) {
+    super(TestModelAsync, ram);
     this.timeout = timeout;
     this.isRandom = isRandom;
   }
@@ -54,8 +58,12 @@ export class OtherTransactionalRepository extends RamRepository<TestModelAsync> 
   private readonly timeout: number;
   private readonly isRandom: boolean;
 
-  constructor(timeout: number, isRandom: boolean = false) {
-    super(TestModelAsync);
+  constructor(
+    timeout: number,
+    isRandom: boolean = false,
+    ram: Record<string, any> = {}
+  ) {
+    super(TestModelAsync, ram);
     this.timeout = timeout;
     this.isRandom = isRandom;
   }
@@ -215,6 +223,23 @@ export class DBRepo<T extends Model<boolean>> extends Repository<T> {
       result.push(await this.create(model));
     }
     return result;
+  }
+}
+
+export class GenericCaller3 {
+  @required()
+  @prop()
+  private repo1: DBRepo<TestModelAsync> = new DBRepo(TestModelAsync);
+
+  @required()
+  @prop()
+  private repo2: DBRepo<TestModelAsync2> = new DBRepo(TestModelAsync2);
+
+  @transactional()
+  async runPromise(model: TestModelAsync) {
+    const created1 = await this.repo1.create(model);
+    const created2 = await this.repo2.create(model);
+    return { created1, created2 };
   }
 }
 

@@ -7,9 +7,10 @@ import { Constructor, Model } from "@decaf-ts/decorator-validation";
 import { transactional } from "../../src";
 
 export class RamRepository<T extends Model> extends Repository<T> {
-  protected ram: Record<string, T> = {};
-
-  constructor(clazz?: Constructor<T>) {
+  constructor(
+    clazz?: Constructor<T>,
+    protected ram: Record<string, T> = {}
+  ) {
     super(clazz);
   }
 
