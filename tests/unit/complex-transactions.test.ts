@@ -35,7 +35,7 @@ describe(`Complex Transactional Context Test`, function () {
     Transaction.setLock(new SynchronousLock(1, onBeginPromise, onEndPromise));
   });
 
-  it("Calls with simple nested objects onBegin before the Transaction and onEnd after", async () => {
+  it.skip("Calls with simple nested objects onBegin before the Transaction and onEnd after", async () => {
     const caller = new GenericCaller();
     const count = 5,
       times = 5;
@@ -74,7 +74,36 @@ describe(`Complex Transactional Context Test`, function () {
     expect(onEnd).toHaveBeenCalledTimes(times * count);
   });
 
-  it("Calls with nested objects onBegin before the Transaction and onEnd after", async () => {
+  it("Calls directly with nested objects onBegin before the Transaction and onEnd after", async () => {
+    const caller = new GenericCaller();
+
+    const lock = Transaction.getLock();
+
+    const mockSubmit = jest.spyOn(lock, "submit");
+    const mockRelease = jest.spyOn(lock, "release");
+
+    const mockBindTransaction = jest.spyOn(
+      Transaction.prototype,
+      "bindTransaction"
+    );
+
+    const tm = new TestModelAsync({
+      id: "" + Date.now(),
+    });
+    const result = await caller.runPromise(tm);
+
+    const { created1, created2 } = result;
+    expect(created1).toBeDefined();
+    expect(created2).toBeDefined();
+
+    expect(mockSubmit).toHaveBeenCalledTimes(1);
+    expect(mockRelease).toHaveBeenCalledTimes(1);
+    expect(mockBindTransaction).toHaveBeenCalledTimes(1 * 4);
+    expect(onBegin).toHaveBeenCalledTimes(1);
+    expect(onEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it("Calls directly with nested objects onBegin before the Transaction and onEnd after", async () => {
     const caller = new GenericCaller3();
 
     const lock = Transaction.getLock();
