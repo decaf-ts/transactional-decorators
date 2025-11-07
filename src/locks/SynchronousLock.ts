@@ -16,8 +16,8 @@ import { LoggedClass } from "@decaf-ts/logging";
  * @implements TransactionLock
  */
 export class SynchronousLock extends LoggedClass implements TransactionLock {
-  private pendingTransactions: Transaction[] = [];
-  currentTransaction?: Transaction = undefined;
+  private pendingTransactions: Transaction<any>[] = [];
+  currentTransaction?: Transaction<any> = undefined;
 
   private readonly lock = new Lock();
 
@@ -33,27 +33,26 @@ export class SynchronousLock extends LoggedClass implements TransactionLock {
    * @summary Submits a transaction to be processed
    * @param {Transaction} transaction
    */
-  submit(transaction: Transaction): void {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this;
-    self.lock.acquire().then(() => {
-      if (
-        self.currentTransaction &&
-        self.currentTransaction.id === transaction.id
-      ) {
-        self.lock.release();
-        return transaction.fire();
-      }
-
-      if (self.counter > 0) {
-        self.counter--;
-        self.lock.release();
-        return self.fireTransaction(transaction);
-      } else {
-        self.pendingTransactions.push(transaction);
-        self.lock.release();
-      }
-    });
+  async submit<R>(transaction: Transaction<R>): Promise<R> {
+    await this.lock.acquire();
+    if (
+      this.currentTransaction &&
+      this.currentTransaction.id === transaction.id
+    ) {
+      this.lock.release();
+      return transaction.fire();
+    }
+    let resultPromise: Promise<R>;
+    if (this.counter > 0) {
+      this.counter--;
+      this.lock.release();
+      resultPromise = this.fireTransaction(transaction);
+    } else {
+      this.pendingTransactions.push(transaction);
+      resultPromise = transaction.wait();
+      this.lock.release();
+    }
+    return resultPromise;
   }
 
   /**
@@ -62,21 +61,18 @@ export class SynchronousLock extends LoggedClass implements TransactionLock {
    * @param {Transaction} transaction
    * @private
    */
-  private fireTransaction(transaction: Transaction) {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this;
+  private async fireTransaction<R>(transaction: Transaction<R>): Promise<R> {
     const log = this.log.for(this.fireTransaction);
-    self.lock.acquire().then(async () => {
-      self.currentTransaction = transaction;
-      self.lock.release();
-      if (self.onBegin) {
-        await self.onBegin();
-      }
-      log.silly(
-        `Starting transaction ${transaction.id}. ${this.pendingTransactions.length} remaining...`
-      );
-      transaction.fire();
-    });
+    await this.lock.acquire();
+    this.currentTransaction = transaction;
+    this.lock.release();
+    if (this.onBegin) {
+      await this.onBegin();
+    }
+    log.silly(
+      `Starting transaction ${transaction.id}. ${this.pendingTransactions.length} remaining...`
+    );
+    return transaction.fire();
   }
   /**
    * @summary Releases The lock after the conclusion of a transaction
@@ -102,10 +98,12 @@ export class SynchronousLock extends LoggedClass implements TransactionLock {
     await this.lock.acquire();
 
     if (this.pendingTransactions.length > 0) {
-      const transaction = this.pendingTransactions.shift() as Transaction;
+      const transaction = this.pendingTransactions.shift() as Transaction<any>;
 
       const cb = () => {
-        return this.fireTransaction.call(this, transaction);
+        return this.fireTransaction.call(this, transaction).catch((err) => {
+          this.log.for(this.fireTransaction).error(err);
+        });
       };
       log.silly(`Releasing transaction lock on transaction ${transaction.id}`);
       if (

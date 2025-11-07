@@ -48,18 +48,17 @@ export function transactional(...data: any[]) {
       }
     );
     descriptor.value = new Proxy(descriptor.value, {
-      async apply(obj: any, thisArg: any, argArray: any[]): Promise<any> {
-        return new Promise<any>((resolve, reject) => {
-          async function exitFunction(
-            err?: Error | any,
-            result?: any
-          ): Promise<any> {
+      async apply<R>(obj: any, thisArg: any, argArray: any[]): Promise<R> {
+        return new Promise<R>((resolve, reject) => {
+          async function exitFunction(err?: Error | R, result?: R): Promise<R> {
             if (err && !(err instanceof Error) && !result) {
               result = err;
               err = undefined;
             }
-            await Transaction.release(err);
-            return err ? reject(err) : resolve(result);
+            await Transaction.release(err as Error | undefined);
+            return err
+              ? (reject(err) as unknown as R)
+              : (resolve(result as R) as unknown as R);
           }
 
           const candidate = argArray.shift();
@@ -72,7 +71,7 @@ export function transactional(...data: any[]) {
               : Transaction.contextTransaction(thisArg);
 
           if (activeTransaction) {
-            const updatedTransaction: Transaction = new Transaction(
+            const updatedTransaction: Transaction<any> = new Transaction(
               target.name,
               propertyKey,
               async () => {
@@ -93,7 +92,7 @@ export function transactional(...data: any[]) {
             activeTransaction.bindTransaction(updatedTransaction);
             activeTransaction.fire();
           } else {
-            const newTransaction = new Transaction(
+            const newTransaction: Transaction<R> = new Transaction(
               target.name,
               propertyKey,
               async () => {

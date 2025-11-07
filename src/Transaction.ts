@@ -49,21 +49,25 @@ import { LoggedClass, getObjectName } from "@decaf-ts/logging";
  *   T->>L: release(error?)
  *   L-->>C: Return result/error
  */
-export class Transaction extends LoggedClass {
+export class Transaction<R> extends LoggedClass {
   readonly id: number;
-  protected action?: () => any;
+  protected action?: () => Promise<R>;
   readonly method?: string;
   readonly source?: string;
   readonly logs: string[];
   private readonly metadata?: any[];
+  private readonly completion: Promise<R>;
+  private resolveCompletion?: (value: R) => void;
+  private rejectCompletion?: (reason?: unknown) => void;
+  private initialFireDispatched = false;
 
   private static lock: TransactionLock;
-  private static readonly contexts = new WeakMap<object, Transaction>();
+  private static readonly contexts = new WeakMap<object, Transaction<any>>();
 
   constructor(
     source: string,
     method?: string,
-    action?: () => any,
+    action?: () => Promise<R>,
     metadata?: any[]
   ) {
     super();
@@ -73,6 +77,10 @@ export class Transaction extends LoggedClass {
     this.logs = [[this.id, source, method].join(" | ")];
     this.source = source;
     this.metadata = metadata;
+    this.completion = new Promise<R>((resolve, reject) => {
+      this.resolveCompletion = resolve;
+      this.rejectCompletion = reject;
+    });
   }
 
   /**
@@ -88,26 +96,23 @@ export class Transaction extends LoggedClass {
     method: (...argzz: any[]) => Promise<R>,
     ...args: any[]
   ): Promise<R> {
-    return new Promise<R>((resolve, reject) => {
-      const transaction = new Transaction(
-        getObjectName(issuer),
-        getObjectName(method),
-        async () => {
-          let result: any;
-          try {
-            result = await Promise.resolve(
-              method.call(transaction.bindToTransaction(issuer), ...args)
-            );
-          } catch (e: unknown) {
-            await Transaction.getLock().release(e as Error);
-            return reject(e);
-          }
+    const transaction: Transaction<R> = new Transaction<R>(
+      getObjectName(issuer),
+      getObjectName(method),
+      async () => {
+        try {
+          const result = await Promise.resolve(
+            method.call(transaction.bindToTransaction(issuer), ...args)
+          );
           await Transaction.getLock().release();
-          return resolve(result);
+          return result;
+        } catch (e: unknown) {
+          await Transaction.getLock().release(e as Error);
+          throw e;
         }
-      );
-      return Transaction.getLock().submit(transaction);
-    });
+      }
+    );
+    return Transaction.submit(transaction);
   }
 
   /**
@@ -136,8 +141,8 @@ export class Transaction extends LoggedClass {
    * @param {Transaction} transaction - The transaction to submit for processing
    * @return {void}
    */
-  static submit(transaction: Transaction) {
-    Transaction.getLock().submit(transaction);
+  static submit<R>(transaction: Transaction<R>): Promise<R> {
+    return Transaction.getLock().submit(transaction);
   }
 
   /**
@@ -165,7 +170,7 @@ export class Transaction extends LoggedClass {
    * @param {Transaction} nextTransaction - The new transaction to bind to the current one
    * @return {void}
    */
-  bindTransaction(nextTransaction: Transaction) {
+  bindTransaction(nextTransaction: Transaction<any>) {
     this.log
       .for(this.bindTransaction)
       .silly(`Binding the ${nextTransaction.toString()} to ${this}`);
@@ -230,9 +235,22 @@ export class Transaction extends LoggedClass {
    * @summary Fires the transaction by executing its associated action function, throwing an error if no action is defined
    * @return {any} The result of the transaction action
    */
-  fire() {
+  fire(): Promise<R> {
     if (!this.action) throw new Error(`Missing the method`);
-    return this.action();
+    const execution = this.action();
+    if (!this.initialFireDispatched) {
+      this.initialFireDispatched = true;
+      execution
+        .then((result) => {
+          this.resolveCompletion?.(result);
+          return result;
+        })
+        .catch((err) => {
+          this.rejectCompletion?.(err);
+          throw err;
+        });
+    }
+    return execution;
   }
 
   /**
@@ -248,10 +266,14 @@ export class Transaction extends LoggedClass {
     }`;
   }
 
-  static contextTransaction(context: any): Transaction | undefined {
+  static contextTransaction(context: any): Transaction<any> | undefined {
     if (!context || !(context as any).__transactionProxy) {
       return undefined;
     }
     return this.contexts.get(context);
+  }
+
+  wait(): Promise<R> {
+    return this.completion;
   }
 }

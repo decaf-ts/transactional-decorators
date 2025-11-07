@@ -56,7 +56,7 @@ const transaction = new Transaction(
 );
 
 // Submitting the transaction for execution
-Transaction.submit(transaction);
+await Transaction.submit(transaction);
 
 // Using the Transaction.push method for callback-style APIs
 Transaction.push(

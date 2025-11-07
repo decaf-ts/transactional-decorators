@@ -11,14 +11,14 @@ export interface TransactionLock {
    * @description Current active transaction reference
    * @summary Stores a reference to the currently executing transaction, allowing access to the active transaction context
    */
-  currentTransaction?: Transaction;
+  currentTransaction?: Transaction<any>;
   /**
    * @description Submits a transaction for processing
    * @summary Adds a transaction to the processing queue and handles its execution according to the lock's concurrency rules
    * @param {Transaction} transaction - The transaction to be processed
    * @return {void}
    */
-  submit(transaction: Transaction): void;
+  submit<R>(transaction: Transaction<R>): Promise<R>;
 
   /**
    * @description Releases the transaction lock
