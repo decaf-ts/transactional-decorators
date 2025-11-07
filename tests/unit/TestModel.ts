@@ -30,6 +30,29 @@ export class TestModelAsync extends Model {
 }
 
 @model()
+export class TestModelAsync2 extends Model {
+  @id()
+  id?: string | number = undefined;
+
+  @readonly()
+  name?: string = undefined;
+
+  @minlength(5)
+  address?: string = undefined;
+
+  @timestamp()
+  updatedOn?: Date = undefined;
+
+  @timestamp(DBOperations.CREATE)
+  @readonly()
+  createdOn?: Date = undefined;
+
+  public constructor(testModel?: ModelArg<TestModelAsync2>) {
+    super(testModel);
+  }
+}
+
+@model()
 export class OtherModelAsync extends Model {
   @id()
   id?: string | number = undefined;

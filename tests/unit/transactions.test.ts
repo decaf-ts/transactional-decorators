@@ -85,6 +85,7 @@ describe(`Transactional Context Test`, function () {
       defaultComparer
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const result = await consumerRunner.run(count, 100, times, true);
     expect(submitTransactionMock).toHaveBeenCalledTimes(count * times);
     expect(releaseTransactionMock).toHaveBeenCalledTimes(count * times);
@@ -450,18 +451,21 @@ describe(`Transactional Context Test`, function () {
       });
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      let currentTransaction: Transaction, endTransaction: Transaction;
+      let currentTransaction: Transaction<any>,
+        endTransaction: Transaction<any>;
       let originalBindTransaction: any, mockBindTransaction: any;
 
-      mockSubmit.mockImplementation((transaction: Transaction) => {
+      mockSubmit.mockImplementation((transaction: Transaction<any>) => {
         const submission = originalSubmit(transaction);
         currentTransaction = transaction;
 
         originalBindTransaction = transaction.bindTransaction.bind(transaction);
         mockBindTransaction = jest.spyOn(transaction, "bindTransaction");
-        mockBindTransaction.mockImplementation((transaction: Transaction) => {
-          originalBindTransaction(transaction);
-        });
+        mockBindTransaction.mockImplementation(
+          (transaction: Transaction<any>) => {
+            originalBindTransaction(transaction);
+          }
+        );
         return submission;
       });
 
@@ -492,18 +496,20 @@ describe(`Transactional Context Test`, function () {
         return originalRelease(err);
       });
 
-      let currentTransaction: Transaction;
+      let currentTransaction: Transaction<any>;
       let originalBindTransaction: any, mockBindTransaction: any;
 
-      mockSubmit.mockImplementation((transaction: Transaction) => {
+      mockSubmit.mockImplementation((transaction: Transaction<any>) => {
         const submission = originalSubmit(transaction);
         currentTransaction = transaction;
 
         originalBindTransaction = transaction.bindTransaction.bind(transaction);
         mockBindTransaction = jest.spyOn(transaction, "bindTransaction");
-        mockBindTransaction.mockImplementation((transaction: Transaction) => {
-          originalBindTransaction(transaction);
-        });
+        mockBindTransaction.mockImplementation(
+          (transaction: Transaction<any>) => {
+            originalBindTransaction(transaction);
+          }
+        );
         return submission;
       });
 
