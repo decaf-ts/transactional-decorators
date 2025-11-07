@@ -2,7 +2,9 @@ import { Metadata } from "@decaf-ts/decoration";
 
 export * from "./interfaces";
 export * from "./locks";
+export * from "./overrides";
 export * from "./constants";
+export * from "./errors";
 export * from "./decorators";
 export * from "./Transaction";
 export * from "./types";

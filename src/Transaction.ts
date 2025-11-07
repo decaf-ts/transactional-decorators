@@ -3,12 +3,8 @@ import { SynchronousLock } from "./locks/SynchronousLock";
 import { DBKeys } from "@decaf-ts/db-decorators";
 import "./overrides";
 import { Metadata } from "@decaf-ts/decoration";
-import {
-  LoggedClass,
-  getObjectName,
-  Logging,
-  LogLevel,
-} from "@decaf-ts/logging";
+import { LoggedClass, getObjectName, Logging } from "@decaf-ts/logging";
+import { TimeoutError } from "./errors";
 
 /**
  * @description Core transaction management class
@@ -56,6 +52,7 @@ import {
  */
 export class Transaction<R> extends LoggedClass {
   static debug = false;
+  static globalTimeout = -1;
 
   private static log = new Proxy(Logging.for(Transaction), {
     get(target, prop, receiver) {
@@ -85,6 +82,7 @@ export class Transaction<R> extends LoggedClass {
   private resolveCompletion?: (value: R) => void;
   private rejectCompletion?: (reason?: unknown) => void;
   private initialFireDispatched = false;
+  private released = false;
 
   private static lock: TransactionLock;
   private static readonly contexts = new WeakMap<object, Transaction<any>>();
@@ -139,11 +137,11 @@ export class Transaction<R> extends LoggedClass {
           );
           l.verbose(`Transaction method ${methodName} executed successfully`);
           l.debug(`Result: ${JSON.stringify(result)}`);
-          await Transaction.getLock().release();
+          await transaction.release();
           l.debug("lock released");
           return result;
         } catch (e: unknown) {
-          await Transaction.getLock().release(e as Error);
+          await transaction.release(e as Error);
           throw e;
         }
       }
@@ -195,6 +193,18 @@ export class Transaction<R> extends LoggedClass {
   }
 
   /**
+   * @description Releases the transaction instance once
+   * @summary Ensures the underlying lock is released at most a single time for the transaction
+   * @param {Error} [err] - Optional error to propagate to the lock implementation
+   * @return {Promise<void>} Resolves once the lock release call finishes or immediately when already released
+   */
+  async release(err?: Error) {
+    if (this.released) return;
+    this.released = true;
+    await Transaction.release(err);
+  }
+
+  /**
    * @description Retrieves transaction metadata
    * @summary Returns a copy of the metadata associated with this transaction, ensuring the original metadata remains unmodified
    * @return {any[] | undefined} A copy of the transaction metadata or undefined if no metadata exists
@@ -237,10 +247,31 @@ export class Transaction<R> extends LoggedClass {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
-    const props = Metadata.properties(obj.constructor) || [];
-    const transactionProps: string[] = props.filter((p) => {
+    const reservedProps = new Set<string>([
+      "__transactionProxy",
+      "__transactionTarget",
+      typeof DBKeys.ORIGINAL === "string" ? DBKeys.ORIGINAL : "__originalObj",
+    ]);
+    const props = new Set<string>(
+      (Metadata.properties(obj.constructor) || []).filter(
+        (p) => !reservedProps.has(p)
+      )
+    );
+    Object.getOwnPropertyNames(obj).forEach((prop) => {
+      if (!reservedProps.has(prop)) props.add(prop);
+    });
+    const transactionProps: string[] = Array.from(props).filter((p) => {
       const type = Metadata.type(obj.constructor, p);
-      return Metadata.isTransactional(type);
+      if (type && Metadata.isTransactional(type)) return true;
+      const value = (obj as Record<string, unknown>)[p];
+      if (
+        value &&
+        (typeof value === "object" || typeof value === "function") &&
+        Metadata.isTransactional(value.constructor as any)
+      ) {
+        return true;
+      }
+      return false;
     });
 
     log.debug(
@@ -277,13 +308,51 @@ export class Transaction<R> extends LoggedClass {
   }
 
   /**
+   * @description Applies the global timeout to the provided Promise, if configured
+   * @param {Promise<R>} execution - Transaction execution promise
+   * @return {Promise<R>} Promise that respects the configured global timeout
+   * @private
+   */
+  private applyGlobalTimeout(execution: Promise<R>): Promise<R> {
+    if (Transaction.globalTimeout <= 0) return execution;
+    const timeoutMs = Transaction.globalTimeout;
+    const log = this.log.for(this.applyGlobalTimeout);
+    return new Promise<R>((resolve, reject) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        const error = new TimeoutError(
+          `Transaction ${this.toString()} exceeded timeout of ${timeoutMs}ms`
+        );
+        log.warn(error.message);
+        this.release(error).catch((releaseErr) =>
+          log.error(releaseErr as Error)
+        );
+        reject(error);
+      }, timeoutMs);
+
+      execution
+        .then((value) => {
+          settled = true;
+          clearTimeout(timer);
+          resolve(value);
+        })
+        .catch((err) => {
+          settled = true;
+          clearTimeout(timer);
+          reject(err);
+        });
+    });
+  }
+
+  /**
    * @description Executes the transaction action
    * @summary Fires the transaction by executing its associated action function, throwing an error if no action is defined
    * @return {any} The result of the transaction action
    */
   fire(): Promise<R> {
     if (!this.action) throw new Error(`Missing the method`);
-    const execution = this.action();
+    const execution = this.applyGlobalTimeout(Promise.resolve(this.action()));
     if (!this.initialFireDispatched) {
       this.initialFireDispatched = true;
       execution

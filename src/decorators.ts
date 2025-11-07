@@ -50,12 +50,16 @@ export function transactional(...data: any[]) {
     descriptor.value = new Proxy(descriptor.value, {
       async apply<R>(obj: any, thisArg: any, argArray: any[]): Promise<R> {
         return new Promise<R>((resolve, reject) => {
-          async function exitFunction(err?: Error | R, result?: R): Promise<R> {
+          async function exitFunction(
+            transaction: Transaction<R>,
+            err?: Error | R,
+            result?: R
+          ): Promise<R> {
             if (err && !(err instanceof Error) && !result) {
               result = err;
               err = undefined;
             }
-            await Transaction.release(err as Error | undefined);
+            await transaction.release(err as Error | undefined);
             return err
               ? (reject(err) as unknown as R)
               : (resolve(result as R) as unknown as R);
@@ -64,6 +68,14 @@ export function transactional(...data: any[]) {
           const candidate = argArray.shift();
           if (candidate !== undefined && !(candidate instanceof Transaction))
             argArray.unshift(candidate);
+
+          const getInvocationArgs = () => {
+            const args = argArray.slice();
+            while (args.length && args[0] instanceof Transaction) {
+              args.shift();
+            }
+            return args;
+          };
 
           const activeTransaction =
             candidate instanceof Transaction
@@ -77,14 +89,14 @@ export function transactional(...data: any[]) {
               async () => {
                 try {
                   return resolve(
-                    await Reflect.apply(
-                      obj,
-                      updatedTransaction.bindToTransaction(thisArg),
-                      argArray
-                    )
-                  );
-                } catch (e: unknown) {
-                  return reject(e);
+                await Reflect.apply(
+                  obj,
+                  updatedTransaction.bindToTransaction(thisArg),
+                  getInvocationArgs()
+                )
+              );
+            } catch (e: unknown) {
+              return reject(e);
                 }
               },
               data.length ? data : undefined
@@ -98,15 +110,16 @@ export function transactional(...data: any[]) {
               async () => {
                 try {
                   return exitFunction(
+                    newTransaction,
                     undefined,
                     await Reflect.apply(
                       obj,
                       newTransaction.bindToTransaction(thisArg),
-                      argArray
+                      getInvocationArgs()
                     )
                   );
                 } catch (e: unknown) {
-                  return exitFunction(e as Error);
+                  return exitFunction(newTransaction, e as Error);
                 }
               },
               data.length ? data : undefined
