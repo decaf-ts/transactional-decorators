@@ -1,4 +1,4 @@
-import { TestModelAsync } from "./TestModel";
+import { TestModelAsync, TestModelAsync2 } from "./TestModel";
 import { transactional } from "../../src";
 import { RamRepository } from "./RamRepository";
 import { Constructor, Model, required } from "@decaf-ts/decorator-validation";
@@ -182,9 +182,10 @@ export class DBMock<T extends Model> implements IRepository<T> {
 }
 
 export class DBRepo<T extends Model<boolean>> extends Repository<T> {
-  private db = new DBMock<T>();
-
-  constructor(clazz: Constructor<T>) {
+  constructor(
+    clazz: Constructor<T>,
+    private db = new DBMock<T>()
+  ) {
     super(clazz);
   }
 
@@ -214,5 +215,129 @@ export class DBRepo<T extends Model<boolean>> extends Repository<T> {
       result.push(await this.create(model));
     }
     return result;
+  }
+}
+
+export class DBMock2 {
+  private _cache: Record<string, Record<string | number, any>> = {};
+
+  constructor(private timeout = 200) {}
+
+  @transactional()
+  async create<T extends Model>(tableName: string, model: T): Promise<T> {
+    const key: string = findModelId(model) as string;
+    if (!(tableName in this._cache)) {
+      this._cache[tableName] = {};
+    }
+    await new Promise<any>((resolve) => setTimeout(resolve, this.timeout));
+    if (key in this._cache)
+      throw new Error(sf("Record with key {0} already exists", key));
+    this._cache[tableName][key] = model;
+    return model;
+  }
+
+  async read<T extends Model>(tableName: string, key: any): Promise<T> {
+    await new Promise<any>((resolve) => setTimeout(resolve, this.timeout / 4));
+    if (!(tableName in this._cache))
+      throw new Error(sf("Table {0} does not exist", tableName));
+    if (!(key in this._cache[tableName]))
+      throw new Error(sf("Record with key {0} does not exist", key));
+    return this._cache[tableName][key];
+  }
+
+  @transactional()
+  async update<T extends Model>(tableName: string, model: T): Promise<T> {
+    const key: string = findModelId(model) as string;
+    await new Promise<any>((resolve) => setTimeout(resolve, this.timeout));
+    if (!(tableName in this._cache))
+      throw new Error(sf("Table {0} does not exist", tableName));
+    if (key in this._cache[tableName])
+      throw new Error(sf("Record with key {0} already exists", key));
+    this._cache[tableName][key] = model;
+    return model;
+  }
+
+  @transactional()
+  async delete<T extends Model>(tableName, key: any): Promise<T> {
+    await new Promise<any>((resolve) => setTimeout(resolve, this.timeout / 4));
+    if (!(tableName in this._cache))
+      throw new Error(sf("Table {0} does not exist", tableName));
+    if (!(key in this._cache[tableName]))
+      throw new Error(sf("Record with key {0} does not exist", key));
+    const cached = this._cache[tableName][key];
+    delete this._cache[tableName][key];
+    return cached;
+  }
+}
+
+export class DBRepo2<T extends Model<boolean>> extends Repository<T> {
+  constructor(
+    clazz: Constructor<T>,
+    private db = new DBMock2()
+  ) {
+    super(clazz);
+  }
+
+  @transactional()
+  async create(model: T) {
+    return this.db.create(this.class.name, model);
+  }
+
+  @transactional()
+  async delete(key: any): Promise<T> {
+    return this.db.delete(this.class.name, key);
+  }
+
+  async read(key: any): Promise<T> {
+    return this.db.read(this.class.name, key);
+  }
+
+  @transactional()
+  async update(model: T): Promise<T> {
+    return this.db.update(this.class.name, model);
+  }
+
+  @transactional()
+  async createAll(models: T[]) {
+    const result = [];
+    for (const model of models) {
+      result.push(await this.create(model));
+    }
+    return result;
+  }
+}
+
+const dbMock2Instance = new DBMock2();
+
+export class GenericCaller2 {
+  @required()
+  @prop()
+  private repo1 = new DBRepo2(TestModelAsync, dbMock2Instance);
+
+  @required()
+  @prop()
+  private repo2 = new DBRepo2(TestModelAsync2, dbMock2Instance);
+
+  @transactional()
+  async runPromise(model: TestModelAsync) {
+    const m2 = new TestModelAsync2(model);
+
+    const created1 = await this.repo1.create(model);
+    const created2 = await this.repo2.create(m2);
+    const updated1 = await this.repo1.update(
+      new TestModelAsync(
+        Object.assign({}, created1, {
+          address: "new  address",
+        })
+      )
+    );
+    const updated2 = await this.repo2.update(
+      new TestModelAsync2(
+        Object.assign({}, created2, {
+          address: "new  address",
+        })
+      )
+    );
+    return { updated1, updated2 };
   }
 }

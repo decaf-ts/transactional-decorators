@@ -3,7 +3,12 @@ import { SynchronousLock } from "./locks/SynchronousLock";
 import { DBKeys } from "@decaf-ts/db-decorators";
 import "./overrides";
 import { Metadata } from "@decaf-ts/decoration";
-import { LoggedClass, getObjectName } from "@decaf-ts/logging";
+import {
+  LoggedClass,
+  getObjectName,
+  Logging,
+  LogLevel,
+} from "@decaf-ts/logging";
 
 /**
  * @description Core transaction management class
@@ -50,6 +55,26 @@ import { LoggedClass, getObjectName } from "@decaf-ts/logging";
  *   L-->>C: Return result/error
  */
 export class Transaction<R> extends LoggedClass {
+  static debug = false;
+
+  private static log = new Proxy(Logging.for(Transaction), {
+    get(target, prop, receiver) {
+      if (prop !== "log" || !Transaction.debug)
+        return Reflect.get(target, prop, receiver);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      return (...args: any[]) => {
+        // do nothing. ignore the log message the Transaction is not in debug mode
+      };
+    },
+  });
+
+  override get log() {
+    if (!this["_log"]) {
+      this["_log"] = Transaction.log;
+    }
+    return this["_log"];
+  }
+
   readonly id: number;
   protected action?: () => Promise<R>;
   readonly method?: string;
@@ -96,21 +121,35 @@ export class Transaction<R> extends LoggedClass {
     method: (...argzz: any[]) => Promise<R>,
     ...args: any[]
   ): Promise<R> {
+    const log = this.log.for(this.push);
+    const issuerName =
+      typeof issuer === "string" ? issuer : getObjectName(issuer);
+    const methodName = getObjectName(method);
+
     const transaction: Transaction<R> = new Transaction<R>(
-      getObjectName(issuer),
-      getObjectName(method),
+      issuerName,
+      methodName,
       async () => {
+        const l = log.for(transaction.id.toString());
         try {
+          l.verbose(`Executing transaction method ${methodName}`);
+          l.debug(`With arguments: ${JSON.stringify(args)}`);
           const result = await Promise.resolve(
             method.call(transaction.bindToTransaction(issuer), ...args)
           );
+          l.verbose(`Transaction method ${methodName} executed successfully`);
+          l.debug(`Result: ${JSON.stringify(result)}`);
           await Transaction.getLock().release();
+          l.debug("lock released");
           return result;
         } catch (e: unknown) {
           await Transaction.getLock().release(e as Error);
           throw e;
         }
       }
+    );
+    log.debug(
+      `Pushing transaction ${transaction.id} for method ${methodName} on issuer ${issuerName}`
     );
     return Transaction.submit(transaction);
   }
@@ -173,7 +212,7 @@ export class Transaction<R> extends LoggedClass {
   bindTransaction(nextTransaction: Transaction<any>) {
     this.log
       .for(this.bindTransaction)
-      .silly(`Binding the ${nextTransaction.toString()} to ${this}`);
+      .verbose(`Binding the ${nextTransaction.toString()} to ${this}`);
     this.logs.push(...nextTransaction.logs);
     nextTransaction.bindTransaction = this.bindToTransaction.bind(this);
     nextTransaction.bindToTransaction = this.bindToTransaction.bind(this);
@@ -187,6 +226,10 @@ export class Transaction<R> extends LoggedClass {
    * @return {any} The bound object with transaction-aware method wrappers
    */
   bindToTransaction(obj: any): any {
+    const log = this.log.for(this.bindToTransaction);
+    log.verbose(
+      `Binding object ${getObjectName(obj)} to transaction ${this.id}`
+    );
     const transactionalMethods: string[] = Metadata.transactionals(
       obj.constructor
     ) as string[];
@@ -200,6 +243,9 @@ export class Transaction<R> extends LoggedClass {
       return Metadata.isTransactional(type);
     });
 
+    log.debug(
+      `found transaction methods: ${transactionalMethods.join(", ")} and properties: ${transactionProps.join(", ")}`
+    );
     const boundObj = new Proxy(obj, {
       get(target, prop, receiver) {
         if (transactionalMethods.includes(prop as string))

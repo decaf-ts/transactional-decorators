@@ -1,6 +1,11 @@
 import { TestModelAsync } from "./TestModel";
 import { Injectables } from "@decaf-ts/injectable-decorators";
-import { DBRepo, GenericCaller, TransactionalRepository } from "./repositories";
+import {
+  DBRepo,
+  GenericCaller,
+  GenericCaller2,
+  TransactionalRepository,
+} from "./repositories";
 import { Repository } from "@decaf-ts/db-decorators";
 import { SynchronousLock, Transaction } from "../../src";
 import {
@@ -120,6 +125,7 @@ describe(`Transactional Context Test`, function () {
       expect(mockBindTransaction).toHaveBeenCalledTimes(4);
     });
   });
+
   describe("Handles onBegin and onEnd methods", () => {
     let onBegin: any, onEnd: any;
 
@@ -217,12 +223,62 @@ describe(`Transactional Context Test`, function () {
     it("propagates results when awaiting the lock submit directly", async () => {
       const lock = new SynchronousLock();
       Transaction.setLock(lock);
-      const transaction = new Transaction("TestSource", "lockSubmit", async () => {
-        await Transaction.release();
-        return 42;
-      });
+      const transaction = new Transaction(
+        "TestSource",
+        "lockSubmit",
+        async () => {
+          await Transaction.release();
+          return 42;
+        }
+      );
 
       await expect(lock.submit(transaction)).resolves.toBe(42);
+    });
+  });
+
+  describe("load test", () => {
+    it("handles a load of transactions over 3 levels", async () => {
+      const caller = new GenericCaller2();
+
+      const count = 5,
+        times = 5;
+
+      const onBegin = jest.fn();
+      const onEnd = jest.fn();
+
+      const onBeginPromise = async () => {
+        return Promise.resolve(onBegin());
+      };
+
+      const onEndPromise = async (err?: Error) => {
+        return Promise.resolve(onEnd(err));
+      };
+
+      Transaction.setLock(new SynchronousLock(1, onBeginPromise, onEndPromise));
+
+      const lock = Transaction.getLock();
+
+      const submitTransactionMock = jest.spyOn(lock, "submit");
+      const releaseTransactionMock = jest.spyOn(lock, "release");
+
+      const consumerRunner = new ConsumerRunner(
+        "create",
+        async (identifier: number) => {
+          const tm = new TestModelAsync({
+            id: "" + identifier,
+          });
+          const created = await caller.runPromise(tm);
+          expect(created).toBeDefined();
+          return created;
+        },
+        defaultComparer
+      );
+
+      await consumerRunner.run(count, 100, times, true);
+      expect(submitTransactionMock).toHaveBeenCalledTimes(count * times);
+      expect(releaseTransactionMock).toHaveBeenCalledTimes(count * times);
+      expect(onBegin).toHaveBeenCalledTimes(count * times);
+      expect(onEnd).toHaveBeenCalledTimes(count * times);
     });
   });
 
