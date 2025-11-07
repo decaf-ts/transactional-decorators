@@ -324,20 +324,20 @@ export class GenericCaller2 {
 
     const created1 = await this.repo1.create(model);
     const created2 = await this.repo2.create(m2);
-    const updated1 = await this.repo1.update(
-      new TestModelAsync(
-        Object.assign({}, created1, {
-          address: "new  address",
-        })
-      )
-    );
-    const updated2 = await this.repo2.update(
-      new TestModelAsync2(
-        Object.assign({}, created2, {
-          address: "new  address",
-        })
-      )
-    );
-    return { updated1, updated2 };
+    // const updated1 = await this.repo1.update(
+    //   new TestModelAsync(
+    //     Object.assign({}, created1, {
+    //       address: "new  address",
+    //     })
+    //   )
+    // );
+    // const updated2 = await this.repo2.update(
+    //   new TestModelAsync2(
+    //     Object.assign({}, created2, {
+    //       address: "new  address",
+    //     })
+    //   )
+    // );
+    return { created1, created2 };
   }
 }

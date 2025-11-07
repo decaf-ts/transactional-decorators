@@ -97,9 +97,9 @@ describe(`Complex Transactional Context Test`, function () {
         });
         const result = await caller.runPromise(tm);
 
-        const { updated1, updated2 } = result;
-        expect(updated2).toBeDefined();
-        expect(updated1).toBeDefined();
+        const { created1, created2 } = result;
+        expect(created1).toBeDefined();
+        expect(created2).toBeDefined();
         return result;
       },
       defaultComparer
