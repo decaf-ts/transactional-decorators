@@ -203,6 +203,29 @@ describe(`Transactional Context Test`, function () {
       expect(onBegin).toHaveBeenCalledTimes(1);
       expect(onEnd).toHaveBeenCalledTimes(1);
     });
+    it("Calls onBegin before the Transaction and onEnd after for nested objects", async () => {
+      const caller = new GenericCaller();
+
+      const lock = Transaction.getLock();
+
+      const submitTransactionMock = jest.spyOn(lock, "submit");
+      const releaseTransactionMock = jest.spyOn(lock, "release");
+
+      const { created1, created2 } = await caller.runPromise(testModel);
+
+      expect(created1.id).toBeDefined();
+      expect(created1.updatedOn).toBeDefined();
+      expect(created1.createdOn).toBeDefined();
+
+      expect(created2.id).toBeDefined();
+      expect(created2.updatedOn).toBeDefined();
+      expect(created2.createdOn).toBeDefined();
+
+      expect(onBegin).toHaveBeenCalledTimes(1);
+      expect(onEnd).toHaveBeenCalledTimes(1);
+      expect(submitTransactionMock).toHaveBeenCalledTimes(1);
+      expect(releaseTransactionMock).toHaveBeenCalledTimes(1);
+    });
 
     it("Calls with nested objects onBegin before the Transaction and onEnd after", async () => {
       const caller = new GenericCaller();
@@ -239,8 +262,8 @@ describe(`Transactional Context Test`, function () {
       expect(mockSubmit).toHaveBeenCalledTimes(times * count);
       expect(mockRelease).toHaveBeenCalledTimes(times * count);
       expect(mockBindTransaction).toHaveBeenCalledTimes(times * count * 4);
-      expect(onBegin).toHaveBeenCalledTimes(1);
-      expect(onEnd).toHaveBeenCalledTimes(1);
+      expect(onBegin).toHaveBeenCalledTimes(times * count);
+      expect(onEnd).toHaveBeenCalledTimes(times * count);
     });
 
     it("Pushes transactions to the queue", async () => {
