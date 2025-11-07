@@ -165,6 +165,55 @@ describe(`Transactional Context Test`, function () {
     });
   });
 
+  describe("SynchronousLock concurrency controls", () => {
+    beforeEach(() => {
+      Injectables.reset();
+      jest.restoreAllMocks();
+      jest.resetAllMocks();
+    });
+
+    afterEach(() => {
+      Transaction.setLock(new SynchronousLock());
+    });
+
+    it("allows up to five simultaneous transactions when configured with a counter of five", async () => {
+      const repository = new TransactionalRepository(75, false);
+      let currentActive = 0;
+      let maxActive = 0;
+      const onBeginPromise = jest.fn(async () => {
+        currentActive += 1;
+        maxActive = Math.max(maxActive, currentActive);
+      });
+      const onEndPromise = jest.fn(async () => {
+        currentActive = Math.max(0, currentActive - 1);
+      });
+
+      Transaction.setLock(new SynchronousLock(5, onBeginPromise, onEndPromise));
+
+      const consumerRunner = new ConsumerRunner(
+        "create",
+        async (identifier: number) => {
+          const tm = new TestModelAsync({
+            id: `${identifier}-${Date.now()}-${Math.random()}`,
+          });
+          const created = await repository.create(tm);
+          expect(created).toBeDefined();
+          return created;
+        },
+        defaultComparer
+      );
+
+      const count = 8;
+      const times = 4;
+      await consumerRunner.run(count, 10, times, true);
+
+      expect(onBeginPromise).toHaveBeenCalledTimes(count * times);
+      expect(onEndPromise).toHaveBeenCalledTimes(count * times);
+      expect(maxActive).toBeLessThanOrEqual(5);
+      expect(maxActive).toBe(5);
+    });
+  });
+
   describe("Handles onBegin and onEnd methods", () => {
     let onBegin: any, onEnd: any;
 
