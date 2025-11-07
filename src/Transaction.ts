@@ -6,6 +6,8 @@ import { Metadata } from "@decaf-ts/decoration";
 import { LoggedClass, getObjectName, Logging } from "@decaf-ts/logging";
 import { TimeoutError } from "./errors";
 
+type TransactionRunnable<R, C = unknown> = (this: C) => R | Promise<R>;
+
 /**
  * @description Core transaction management class
  * @summary Manages transaction lifecycle, including creation, execution, and cleanup. Provides mechanisms for binding transactions to objects and methods, ensuring proper transaction context propagation.
@@ -148,6 +150,63 @@ export class Transaction<R> extends LoggedClass {
     );
     log.debug(
       `Pushing transaction ${transaction.id} for method ${methodName} on issuer ${issuerName}`
+    );
+    return Transaction.submit(transaction);
+  }
+
+  static async run<R, C = unknown>(
+    runnable: TransactionRunnable<R, C>,
+    metadata?: any[]
+  ): Promise<R>;
+  static async run<R, C = unknown>(
+    context: C,
+    runnable: TransactionRunnable<R, C>,
+    metadata?: any[]
+  ): Promise<R>;
+  static async run<R, C = unknown>(
+    contextOrRunnable: C | TransactionRunnable<R, C>,
+    runnableOrMetadata?: TransactionRunnable<R, C> | any[],
+    maybeMetadata?: any[]
+  ): Promise<R> {
+    const contextProvided = typeof contextOrRunnable !== "function";
+    const context = (contextProvided ? contextOrRunnable : undefined) as
+      | C
+      | undefined;
+    const runnable = (
+      contextProvided ? runnableOrMetadata : contextOrRunnable
+    ) as TransactionRunnable<R, C>;
+    if (typeof runnable !== "function") {
+      throw new Error("Transaction.run requires an async function");
+    }
+    const rawMetadata = contextProvided ? maybeMetadata : runnableOrMetadata;
+    const metadataValue =
+      Array.isArray(rawMetadata) && rawMetadata.length
+        ? rawMetadata
+        : undefined;
+    const sourceName = context
+      ? getObjectName(context)
+      : getObjectName(runnable);
+    const methodName = getObjectName(runnable);
+    // eslint-disable-next-line prefer-const
+    let transaction: Transaction<R>;
+    const action = async () => {
+      try {
+        const boundContext = context
+          ? transaction.bindToTransaction(context)
+          : undefined;
+        const result = await runnable.call((boundContext ?? transaction) as C);
+        await transaction.release();
+        return result;
+      } catch (error) {
+        await transaction.release(error as Error);
+        throw error;
+      }
+    };
+    transaction = new Transaction<R>(
+      sourceName,
+      methodName,
+      action,
+      metadataValue
     );
     return Transaction.submit(transaction);
   }

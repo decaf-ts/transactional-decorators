@@ -529,4 +529,29 @@ describe(`Transactional Context Test`, function () {
       expect(currentTransaction.logs.length).toEqual(21);
     });
   });
+
+  describe("Transaction.run helper", () => {
+    it("executes arbitrary logic inside a transaction and preserves context", async () => {
+      const caller = new GenericCaller();
+      const lock = Transaction.getLock();
+      const submitTransactionMock = jest.spyOn(lock, "submit");
+      const releaseTransactionMock = jest.spyOn(lock, "release");
+
+      const tm = new TestModelAsync({
+        id: "" + Date.now(),
+      });
+
+      const result = await Transaction.run(
+        caller,
+        async function (this: GenericCaller) {
+          return this.runPromise(tm);
+        }
+      );
+
+      expect(result.created1).toBeDefined();
+      expect(result.created2).toBeDefined();
+      expect(submitTransactionMock).toHaveBeenCalledTimes(1);
+      expect(releaseTransactionMock).toHaveBeenCalledTimes(1);
+    });
+  });
 });
