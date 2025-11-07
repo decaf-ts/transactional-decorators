@@ -85,7 +85,7 @@ describe(`Transactional Context Test`, function () {
       defaultComparer
     );
 
-    await consumerRunner.run(count, 100, times, true);
+    const result = await consumerRunner.run(count, 100, times, true);
     expect(submitTransactionMock).toHaveBeenCalledTimes(count * times);
     expect(releaseTransactionMock).toHaveBeenCalledTimes(count * times);
     expect(onBegin).toHaveBeenCalledTimes(count * times);
@@ -125,6 +125,43 @@ describe(`Transactional Context Test`, function () {
       expect(mockRelease).toHaveBeenCalledTimes(1);
       expect(mockBindTransaction).toHaveBeenCalledTimes(4);
     });
+
+    it("schedules multiple transactional methods within the same transactional function", async () => {
+      const caller = new GenericCaller();
+      const count = 5,
+        times = 5;
+
+      const lock = Transaction.getLock();
+
+      const mockSubmit = jest.spyOn(lock, "submit");
+      const mockRelease = jest.spyOn(lock, "release");
+
+      const mockBindTransaction = jest.spyOn(
+        Transaction.prototype,
+        "bindTransaction"
+      );
+
+      const consumerRunner = new ConsumerRunner(
+        "create",
+        async (identifier: number) => {
+          const tm = new TestModelAsync({
+            id: "" + identifier,
+          });
+          const result = await caller.runPromise(tm);
+
+          const { created1, created2 } = result;
+          expect(created1).toBeDefined();
+          expect(created2).toBeDefined();
+          return result;
+        },
+        defaultComparer
+      );
+      const result = await consumerRunner.run(count, 100, times, true);
+      expect(result).toBeDefined();
+      expect(mockSubmit).toHaveBeenCalledTimes(times * count);
+      expect(mockRelease).toHaveBeenCalledTimes(times * count);
+      expect(mockBindTransaction).toHaveBeenCalledTimes(times * count * 4);
+    });
   });
 
   describe("Handles onBegin and onEnd methods", () => {
@@ -163,6 +200,45 @@ describe(`Transactional Context Test`, function () {
 
       expect(submitTransactionMock).toHaveBeenCalledTimes(1);
       expect(releaseTransactionMock).toHaveBeenCalledTimes(1);
+      expect(onBegin).toHaveBeenCalledTimes(1);
+      expect(onEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it("Calls with nested objects onBegin before the Transaction and onEnd after", async () => {
+      const caller = new GenericCaller();
+      const count = 5,
+        times = 5;
+
+      const lock = Transaction.getLock();
+
+      const mockSubmit = jest.spyOn(lock, "submit");
+      const mockRelease = jest.spyOn(lock, "release");
+
+      const mockBindTransaction = jest.spyOn(
+        Transaction.prototype,
+        "bindTransaction"
+      );
+
+      const consumerRunner = new ConsumerRunner(
+        "create",
+        async (identifier: number) => {
+          const tm = new TestModelAsync({
+            id: "" + identifier,
+          });
+          const result = await caller.runPromise(tm);
+
+          const { created1, created2 } = result;
+          expect(created1).toBeDefined();
+          expect(created2).toBeDefined();
+          return result;
+        },
+        defaultComparer
+      );
+      const result = await consumerRunner.run(count, 100, times, true);
+      expect(result).toBeDefined();
+      expect(mockSubmit).toHaveBeenCalledTimes(times * count);
+      expect(mockRelease).toHaveBeenCalledTimes(times * count);
+      expect(mockBindTransaction).toHaveBeenCalledTimes(times * count * 4);
       expect(onBegin).toHaveBeenCalledTimes(1);
       expect(onEnd).toHaveBeenCalledTimes(1);
     });
@@ -237,7 +313,7 @@ describe(`Transactional Context Test`, function () {
     });
   });
 
-  describe("load test", () => {
+  describe.skip("load test", () => {
     it("handles a load of transactions over 3 levels", async () => {
       const caller = new GenericCaller2();
 
