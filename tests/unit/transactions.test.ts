@@ -266,6 +266,45 @@ describe(`Transactional Context Test`, function () {
       expect(onEnd).toHaveBeenCalledTimes(times * count);
     });
 
+    it("Calls with nested objects onBegin before the Transaction and onEnd after", async () => {
+      const caller = new GenericCaller();
+      const count = 5,
+        times = 5;
+
+      const lock = Transaction.getLock();
+
+      const mockSubmit = jest.spyOn(lock, "submit");
+      const mockRelease = jest.spyOn(lock, "release");
+
+      const mockBindTransaction = jest.spyOn(
+        Transaction.prototype,
+        "bindTransaction"
+      );
+
+      const consumerRunner = new ConsumerRunner(
+        "create",
+        async (identifier: number) => {
+          const tm = new TestModelAsync({
+            id: "" + identifier,
+          });
+          const result = await caller.runPromise(tm);
+
+          const { created1, created2 } = result;
+          expect(created1).toBeDefined();
+          expect(created2).toBeDefined();
+          return result;
+        },
+        defaultComparer
+      );
+      const result = await consumerRunner.run(count, 100, times, true);
+      expect(result).toBeDefined();
+      expect(mockSubmit).toHaveBeenCalledTimes(times * count);
+      expect(mockRelease).toHaveBeenCalledTimes(times * count);
+      expect(mockBindTransaction).toHaveBeenCalledTimes(times * count * 4);
+      expect(onBegin).toHaveBeenCalledTimes(times * count);
+      expect(onEnd).toHaveBeenCalledTimes(times * count);
+    });
+
     it("Pushes transactions to the queue", async () => {
       const testRepository: TransactionalRepository =
         new TransactionalRepository(1000, false);
