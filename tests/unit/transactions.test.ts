@@ -196,7 +196,9 @@ describe(`Transactional Context Test`, function () {
     it("Logs a simple transaction properly", async () => {
       const repo = new DBRepo(TestModelAsync);
 
-      const model = new TestModelAsync();
+      const model = new TestModelAsync({
+        id: "" + Date.now(),
+      });
 
       const transactionLock = Transaction.getLock();
 
