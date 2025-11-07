@@ -65,17 +65,21 @@ export function transactional(...data: any[]) {
               : (resolve(result as R) as unknown as R);
           }
 
-          const candidate = argArray.shift();
-          if (candidate !== undefined && !(candidate instanceof Transaction))
-            argArray.unshift(candidate);
-
-          const getInvocationArgs = () => {
-            const args = argArray.slice();
-            while (args.length && args[0] instanceof Transaction) {
-              args.shift();
+          const candidate = argArray[0];
+          const transactionPrefixLength = (() => {
+            let count = 0;
+            while (
+              count < argArray.length &&
+              argArray[count] instanceof Transaction
+            ) {
+              count++;
             }
-            return args;
-          };
+            return count;
+          })();
+          const invocationArgs =
+            transactionPrefixLength > 0
+              ? argArray.slice(transactionPrefixLength)
+              : argArray;
 
           const activeTransaction =
             candidate instanceof Transaction
@@ -89,14 +93,14 @@ export function transactional(...data: any[]) {
               async () => {
                 try {
                   return resolve(
-                await Reflect.apply(
-                  obj,
-                  updatedTransaction.bindToTransaction(thisArg),
-                  getInvocationArgs()
-                )
-              );
-            } catch (e: unknown) {
-              return reject(e);
+                    await Reflect.apply(
+                      obj,
+                      updatedTransaction.bindToTransaction(thisArg),
+                      invocationArgs
+                    )
+                  );
+                } catch (e: unknown) {
+                  return reject(e);
                 }
               },
               data.length ? data : undefined
@@ -115,7 +119,7 @@ export function transactional(...data: any[]) {
                     await Reflect.apply(
                       obj,
                       newTransaction.bindToTransaction(thisArg),
-                      getInvocationArgs()
+                      invocationArgs
                     )
                   );
                 } catch (e: unknown) {

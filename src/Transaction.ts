@@ -7,6 +7,7 @@ import { LoggedClass, getObjectName, Logging } from "@decaf-ts/logging";
 import { TimeoutError } from "./errors";
 
 type TransactionRunnable<R, C = unknown> = (this: C) => R | Promise<R>;
+const objectNameCache = new WeakMap<object, string>();
 
 /**
  * @description Core transaction management class
@@ -55,6 +56,15 @@ type TransactionRunnable<R, C = unknown> = (this: C) => R | Promise<R>;
 export class Transaction<R> extends LoggedClass {
   static debug = false;
   static globalTimeout = -1;
+  private static readonly metadataCache = new WeakMap<
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+    Function,
+    {
+      methods: string[];
+      propertyKeys: string[];
+      propertyDesignTypes: Map<string, boolean>;
+    }
+  >();
 
   private static log = new Proxy(Logging.for(Transaction), {
     get(target, prop, receiver) {
@@ -122,9 +132,8 @@ export class Transaction<R> extends LoggedClass {
     ...args: any[]
   ): Promise<R> {
     const log = this.log.for(this.push);
-    const issuerName =
-      typeof issuer === "string" ? issuer : getObjectName(issuer);
-    const methodName = getObjectName(method);
+    const issuerName = Transaction.describeTarget(issuer);
+    const methodName = Transaction.describeTarget(method);
 
     const transaction: Transaction<R> = new Transaction<R>(
       issuerName,
@@ -184,22 +193,25 @@ export class Transaction<R> extends LoggedClass {
         ? rawMetadata
         : undefined;
     const sourceName = context
-      ? getObjectName(context)
-      : getObjectName(runnable);
-    const methodName = getObjectName(runnable);
+      ? Transaction.describeTarget(context as object)
+      : Transaction.describeTarget(runnable as object);
+    const methodName = Transaction.describeTarget(runnable as object);
     // eslint-disable-next-line prefer-const
     let transaction: Transaction<R>;
     const action = async () => {
+      let caughtError: unknown;
       try {
         const boundContext = context
           ? transaction.bindToTransaction(context)
           : undefined;
-        const result = await runnable.call((boundContext ?? transaction) as C);
-        await transaction.release();
-        return result;
+        return await runnable.call((boundContext ?? transaction) as C);
       } catch (error) {
-        await transaction.release(error as Error);
+        caughtError = error;
         throw error;
+      } finally {
+        await transaction.release(
+          caughtError instanceof Error ? (caughtError as Error) : undefined
+        );
       }
     };
     transaction = new Transaction<R>(
@@ -272,6 +284,28 @@ export class Transaction<R> extends LoggedClass {
     return this.metadata ? [...this.metadata] : undefined;
   }
 
+  private static getTransactionalMetadata(target: any) {
+    let cached = this.metadataCache.get(target);
+    if (cached) return cached;
+    const reservedProps = new Set<string>([
+      "__transactionProxy",
+      "__transactionTarget",
+      typeof DBKeys.ORIGINAL === "string" ? DBKeys.ORIGINAL : "__originalObj",
+    ]);
+    const methods = (Metadata.transactionals(target) as string[]) ?? [];
+    const propertyKeys = (Metadata.properties(target) || []).filter(
+      (prop) => !reservedProps.has(prop)
+    );
+    const propertyDesignTypes = new Map<string, boolean>();
+    propertyKeys.forEach((prop) => {
+      const type = Metadata.type(target, prop);
+      propertyDesignTypes.set(prop, !!type && Metadata.isTransactional(type));
+    });
+    cached = { methods, propertyKeys, propertyDesignTypes };
+    this.metadataCache.set(target, cached);
+    return cached;
+  }
+
   /**
    * @description Links a new transaction to the current one
    * @summary Binds a new transaction operation to the current transaction, transferring logs and binding methods to maintain transaction context
@@ -299,9 +333,8 @@ export class Transaction<R> extends LoggedClass {
     log.verbose(
       `Binding object ${getObjectName(obj)} to transaction ${this.id}`
     );
-    const transactionalMethods: string[] = Metadata.transactionals(
-      obj.constructor
-    ) as string[];
+    const metadata = Transaction.getTransactionalMetadata(obj.constructor);
+    const transactionalMethods = metadata.methods;
     if (!transactionalMethods.length) return obj;
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
@@ -311,17 +344,12 @@ export class Transaction<R> extends LoggedClass {
       "__transactionTarget",
       typeof DBKeys.ORIGINAL === "string" ? DBKeys.ORIGINAL : "__originalObj",
     ]);
-    const props = new Set<string>(
-      (Metadata.properties(obj.constructor) || []).filter(
-        (p) => !reservedProps.has(p)
-      )
-    );
+    const props = new Set<string>(metadata.propertyKeys);
     Object.getOwnPropertyNames(obj).forEach((prop) => {
       if (!reservedProps.has(prop)) props.add(prop);
     });
     const transactionProps: string[] = Array.from(props).filter((p) => {
-      const type = Metadata.type(obj.constructor, p);
-      if (type && Metadata.isTransactional(type)) return true;
+      if (metadata.propertyDesignTypes.get(p)) return true;
       const value = (obj as Record<string, unknown>)[p];
       if (
         value &&
@@ -411,7 +439,14 @@ export class Transaction<R> extends LoggedClass {
    */
   fire(): Promise<R> {
     if (!this.action) throw new Error(`Missing the method`);
-    const execution = this.applyGlobalTimeout(Promise.resolve(this.action()));
+    const executeAction = async () => {
+      return this.action ? await this.action() : (undefined as R);
+    };
+    const baseExecution = executeAction();
+    const execution =
+      Transaction.globalTimeout > 0
+        ? this.applyGlobalTimeout(baseExecution)
+        : baseExecution;
     if (!this.initialFireDispatched) {
       this.initialFireDispatched = true;
       execution
@@ -449,5 +484,21 @@ export class Transaction<R> extends LoggedClass {
 
   wait(): Promise<R> {
     return this.completion;
+  }
+
+  private static describeTarget(target: any): string {
+    if (
+      target === null ||
+      (typeof target !== "object" && typeof target !== "function")
+    ) {
+      return getObjectName(target);
+    }
+    const key = target as object;
+    let cached = objectNameCache.get(key);
+    if (!cached) {
+      cached = getObjectName(target);
+      objectNameCache.set(key, cached);
+    }
+    return cached;
   }
 }

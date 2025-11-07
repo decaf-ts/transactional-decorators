@@ -18,12 +18,23 @@ import { isBrowser, LoggedClass } from "@decaf-ts/logging";
 export class SynchronousLock extends LoggedClass implements TransactionLock {
   private pendingTransactions: Transaction<any>[] = [];
   currentTransaction?: Transaction<any> = undefined;
+  private readonly loggerCache = new Map<string, ReturnType<typeof this.log.for>>();
 
   override get log() {
     if (!this["_log"]) {
       this["_log"] = Transaction["log"].for(this);
     }
     return this["_log"];
+  }
+
+  private logger(method: "submit" | "fireTransaction" | "release") {
+    if (!this.loggerCache.has(method)) {
+      this.loggerCache.set(
+        method,
+        this.log.for((this as unknown as Record<string, any>)[method])
+      );
+    }
+    return this.loggerCache.get(method) as ReturnType<typeof this.log.for>;
   }
 
   private readonly lock = new Lock();
@@ -41,7 +52,7 @@ export class SynchronousLock extends LoggedClass implements TransactionLock {
    * @param {Transaction} transaction
    */
   async submit<R>(transaction: Transaction<R>): Promise<R> {
-    const log = this.log.for(this.submit);
+    const log = this.logger("submit");
     await this.lock.acquire();
     log.silly(`Lock acquired to submit transaction ${transaction.id}`);
     if (
@@ -75,7 +86,7 @@ export class SynchronousLock extends LoggedClass implements TransactionLock {
    * @private
    */
   private async fireTransaction<R>(transaction: Transaction<R>): Promise<R> {
-    const log = this.log.for(this.fireTransaction);
+    const log = this.logger("fireTransaction");
     await this.lock.acquire();
     log.silly(`Lock acquired obtain transaction ${transaction.id}`);
     this.currentTransaction = transaction;
@@ -94,7 +105,7 @@ export class SynchronousLock extends LoggedClass implements TransactionLock {
    * @summary Releases The lock after the conclusion of a transaction
    */
   async release(err?: Error): Promise<void> {
-    const log = this.log.for(this.release);
+    const log = this.logger("release");
 
     await this.lock.acquire();
     if (!this.currentTransaction)
