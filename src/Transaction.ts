@@ -59,7 +59,7 @@ export class Transaction<R> extends LoggedClass {
 
   private static log = new Proxy(Logging.for(Transaction), {
     get(target, prop, receiver) {
-      if (prop !== "log" || !Transaction.debug)
+      if (prop !== "log" || Transaction.debug)
         return Reflect.get(target, prop, receiver);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       return (...args: any[]) => {

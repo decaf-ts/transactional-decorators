@@ -18,6 +18,7 @@ const DEFAULT_TIMEOUT = 15000;
 jest.setTimeout(DEFAULT_TIMEOUT);
 if (process.env["GITLAB_CI"]) jest.setTimeout(3 * DEFAULT_TIMEOUT);
 
+Transaction.debug = true;
 Logging.setConfig({ level: LogLevel.silly });
 
 describe(`Transactional Context Test`, function () {
