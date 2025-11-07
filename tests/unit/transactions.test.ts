@@ -450,9 +450,7 @@ describe(`Transactional Context Test`, function () {
         return originalRelease(err);
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      let currentTransaction: Transaction<any>,
-        endTransaction: Transaction<any>;
+      let currentTransaction: Transaction<any>;
       let originalBindTransaction: any, mockBindTransaction: any;
 
       mockSubmit.mockImplementation((transaction: Transaction<any>) => {
