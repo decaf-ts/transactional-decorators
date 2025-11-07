@@ -1,4 +1,4 @@
-import { TestModelAsync, TestModelAsync2 } from "./TestModel";
+import { OtherModelAsync, TestModelAsync, TestModelAsync2 } from "./TestModel";
 import { transactional } from "../../src";
 import { RamRepository } from "./RamRepository";
 import { Constructor, Model, required } from "@decaf-ts/decorator-validation";
@@ -131,7 +131,7 @@ export class DBMock<T extends Model> implements IRepository<T> {
 
   @transactional()
   async create(model: T): Promise<T> {
-    const key: string = findModelId(model) as string;
+    const key: string = (findModelId(model) as string) + model.constructor.name;
     await new Promise<any>((resolve) => setTimeout(resolve, this.timeout));
     if (key in this._cache)
       throw new Error(sf("Record with key {0} already exists", key));
@@ -148,7 +148,7 @@ export class DBMock<T extends Model> implements IRepository<T> {
 
   @transactional()
   async update(model: T): Promise<T> {
-    const key: string = findModelId(model) as string;
+    const key: string = (findModelId(model) as string) + model.constructor.name;
     await new Promise<any>((resolve) => setTimeout(resolve, this.timeout));
     if (key in this._cache)
       throw new Error(sf("Record with key {0} already exists", key));
@@ -233,12 +233,18 @@ export class GenericCaller3 {
 
   @required()
   @prop()
-  private repo2: DBRepo<TestModelAsync2> = new DBRepo(TestModelAsync2);
+  private repo2: DBRepo<OtherModelAsync> = new DBRepo(OtherModelAsync);
 
   @transactional()
   async runPromise(model: TestModelAsync) {
     const created1 = await this.repo1.create(model);
-    const created2 = await this.repo2.create(model);
+    const created2 = await this.repo2.create(
+      new OtherModelAsync(
+        Object.assign({}, model, {
+          id: created1.id + "_other",
+        })
+      )
+    );
     return { created1, created2 };
   }
 }

@@ -132,7 +132,7 @@ describe(`Complex Transactional Context Test`, function () {
     expect(onEnd).toHaveBeenCalledTimes(1);
   });
 
-  it.skip("Calls with nested objects onBegin before the Transaction and onEnd after", async () => {
+  it("Calls with nested objects onBegin before the Transaction and onEnd after", async () => {
     const caller = new GenericCaller3();
     const count = 5,
       times = 5;

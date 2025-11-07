@@ -30,7 +30,7 @@ export class TestModelAsync extends Model {
 }
 
 @model()
-export class TestModelAsync2 extends Model {
+export class OtherModelAsync extends Model {
   @id()
   id?: string | number = undefined;
 
@@ -47,7 +47,7 @@ export class TestModelAsync2 extends Model {
   @readonly()
   createdOn?: Date = undefined;
 
-  public constructor(testModel?: ModelArg<TestModelAsync>) {
+  public constructor(testModel?: ModelArg<OtherModelAsync>) {
     super(testModel);
   }
 }
