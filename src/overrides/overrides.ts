@@ -1,6 +1,6 @@
 import { Metadata } from "@decaf-ts/decoration";
 import { TransactionalKeys } from "../constants";
-import { Constructor } from "@decaf-ts/decorator-validation";
+import { Constructor } from "@decaf-ts/decoration";
 
 (Metadata as any).transactionals = function <T>(
   obj: Constructor<T>

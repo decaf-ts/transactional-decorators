@@ -1,5 +1,5 @@
 import "@decaf-ts/decoration";
-import { Constructor } from "@decaf-ts/decorator-validation";
+import { Constructor } from "@decaf-ts/decoration";
 
 declare module "@decaf-ts/decoration" {
   // eslint-disable-next-line @typescript-eslint/no-namespace

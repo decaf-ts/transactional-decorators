@@ -1,10 +1,7 @@
-import {
-  findModelId,
-  NotFoundError,
-  Repository,
-} from "@decaf-ts/db-decorators";
-import { Constructor, Model } from "@decaf-ts/decorator-validation";
+import { NotFoundError, Repository } from "@decaf-ts/db-decorators";
+import { Model } from "@decaf-ts/decorator-validation";
 import { transactional } from "../../src";
+import { Constructor } from "@decaf-ts/decoration";
 
 export class RamRepository<T extends Model> extends Repository<T> {
   constructor(
@@ -16,7 +13,7 @@ export class RamRepository<T extends Model> extends Repository<T> {
 
   @transactional()
   async create(model: T): Promise<T> {
-    const pk = findModelId(model);
+    const pk = Model.pk(model, true);
     this.ram[pk as any] = model;
     return model;
   }
@@ -35,7 +32,7 @@ export class RamRepository<T extends Model> extends Repository<T> {
 
   @transactional()
   async update(model: T): Promise<T> {
-    const pk = findModelId(model);
+    const pk = Model.pk(model, true);
     this.ram[pk as any] = model;
     return model;
   }

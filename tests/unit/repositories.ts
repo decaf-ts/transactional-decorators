@@ -1,9 +1,9 @@
 import { OtherModelAsync, TestModelAsync, TestModelAsync2 } from "./TestModel";
 import { transactional } from "../../src";
 import { RamRepository } from "./RamRepository";
-import { Constructor, Model, required } from "@decaf-ts/decorator-validation";
-import { findModelId, IRepository, Repository } from "@decaf-ts/db-decorators";
-import { prop } from "@decaf-ts/decoration";
+import { Model, required } from "@decaf-ts/decorator-validation";
+import { IRepository, Repository } from "@decaf-ts/db-decorators";
+import { prop, Constructor } from "@decaf-ts/decoration";
 import { sf } from "@decaf-ts/logging";
 
 export class TransactionalRepository extends RamRepository<TestModelAsync> {
@@ -131,7 +131,7 @@ export class DBMock<T extends Model> implements IRepository<T> {
 
   @transactional()
   async create(model: T): Promise<T> {
-    const key: string = (findModelId(model) as string) + model.constructor.name;
+    const key: string = Model.pk(model, true) + model.constructor.name;
     await new Promise<any>((resolve) => setTimeout(resolve, this.timeout));
     if (key in this._cache)
       throw new Error(sf("Record with key {0} already exists", key));
@@ -148,7 +148,7 @@ export class DBMock<T extends Model> implements IRepository<T> {
 
   @transactional()
   async update(model: T): Promise<T> {
-    const key: string = (findModelId(model) as string) + model.constructor.name;
+    const key: string = Model.pk(model, true) + model.constructor.name;
     await new Promise<any>((resolve) => setTimeout(resolve, this.timeout));
     if (key in this._cache)
       throw new Error(sf("Record with key {0} already exists", key));
@@ -256,7 +256,7 @@ export class DBMock2 {
 
   @transactional()
   async create<T extends Model>(tableName: string, model: T): Promise<T> {
-    const key: string = findModelId(model) as string;
+    const key: string = Model.pk(model, true);
     if (!(tableName in this._cache)) {
       this._cache[tableName] = {};
     }
@@ -278,7 +278,7 @@ export class DBMock2 {
 
   @transactional()
   async update<T extends Model>(tableName: string, model: T): Promise<T> {
-    const key: string = findModelId(model) as string;
+    const key: string = Model.pk(model, true);
     await new Promise<any>((resolve) => setTimeout(resolve, this.timeout));
     if (!(tableName in this._cache))
       throw new Error(sf("Table {0} does not exist", tableName));
