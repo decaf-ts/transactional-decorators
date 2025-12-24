@@ -78,7 +78,7 @@
     "@decaf-ts/utils": "latest"
   },
   "dependencies": {
-    "@decaf-ts/db-decorators": "latest",
+    "@decaf-ts/db-decorators": "0.7.6",
     "@decaf-ts/decoration": "latest",
     "@decaf-ts/decorator-validation": "latest",
     "@decaf-ts/injectable-decorators": "latest"
