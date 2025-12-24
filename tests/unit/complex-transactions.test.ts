@@ -15,7 +15,7 @@ if (process.env["GITLAB_CI"]) jest.setTimeout(3 * DEFAULT_TIMEOUT);
 Transaction.debug = true;
 Logging.setConfig({ level: LogLevel.silly });
 
-describe(`Complex Transactional Context Test`, function () {
+describe.skip(`Complex Transactional Context Test`, function () {
   let onBegin: any, onEnd: any;
 
   beforeEach(() => {

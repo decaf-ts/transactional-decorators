@@ -13,8 +13,8 @@ import { LockCallable } from "../types";
  * });
  */
 export class Lock {
-  private queue: LockCallable[] = [];
-  private locked = false;
+  protected queue: LockCallable[] = [];
+  protected locked = false;
 
   /**
    * @description Executes a function with exclusive lock access
@@ -22,7 +22,8 @@ export class Lock {
    * @param {Function} func - The function to execute when the lock is acquired
    * @return {Promise<any>} A promise that resolves with the result of the executed function
    */
-  async execute(func: () => any) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async execute(func: () => any, ...args: any[]) {
     await this.acquire();
     let result: any;
     try {
@@ -39,7 +40,8 @@ export class Lock {
    * @summary waits to acquire the lock
    * @param {string} [issuer]
    */
-  async acquire(): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async acquire(...args: any[]): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     if (self.locked) {
@@ -53,7 +55,8 @@ export class Lock {
   /**
    * @summary releases the lock
    */
-  release() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  release(...args: any[]) {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     const next: LockCallable | undefined = self.queue.shift();

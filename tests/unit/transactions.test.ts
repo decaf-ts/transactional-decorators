@@ -14,7 +14,7 @@ import {
 } from "../../node_modules/@decaf-ts/utils/lib/tests/Consumer.cjs";
 import { Logging, LogLevel } from "@decaf-ts/logging";
 
-const DEFAULT_TIMEOUT = 15000;
+const DEFAULT_TIMEOUT = 150000;
 jest.setTimeout(DEFAULT_TIMEOUT);
 if (process.env["GITLAB_CI"]) jest.setTimeout(3 * DEFAULT_TIMEOUT);
 

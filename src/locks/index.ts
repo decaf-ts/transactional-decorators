@@ -5,4 +5,5 @@
  */
 
 export * from "./Lock";
+export * from "./MultiLock";
 export * from "./SynchronousLock";
