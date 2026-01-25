@@ -6,6 +6,14 @@ A comprehensive TypeScript library providing transaction management capabilities
 
 > Release docs refreshed on 2025-11-26. See [workdocs/reports/RELEASE_NOTES.md](./workdocs/reports/RELEASE_NOTES.md) for ticket summaries.
 
+### Core Concepts
+
+*   **`@transactional`**: A method decorator that wraps a method in a transaction, ensuring that it is executed atomically.
+*   **`Transaction` Class**: The core class for managing transaction lifecycle, including creation, execution, and cleanup.
+*   **Locks**: The library provides different lock implementations to control concurrency.
+    *   **`SynchronousLock`**: A simple lock that allows only one transaction to execute at a time.
+    *   **`MultiLock`**: A more advanced lock that allows multiple transactions to execute concurrently, with a configurable limit.
+
 
 ![Licence](https://img.shields.io/github/license/decaf-ts/transactional-decorators.svg?style=plastic)
 ![GitHub language count](https://img.shields.io/github/languages/count/decaf-ts/transactional-decorators?style=plastic)
@@ -60,226 +68,67 @@ The Transactional Decorators library is a standalone module that provides a robu
 This library is ideal for applications that need to ensure data consistency and handle concurrent operations safely, such as database applications, financial systems, or any application where atomic operations are important.
 
 
-### How to Use
+# How to Use
 
-- [Initial Setup](./tutorials/For%20Developers.md#_initial-setup_)
-- [Installation](./tutorials/For%20Developers.md#installation)
+This guide provides examples of how to use the main features of the `@decaf-ts/transactional-decorators` library.
 
-#### Using the @transactional Decorator
+## Transactional Decorator
 
-The `@transactional` decorator is the simplest way to add transactional behavior to your methods.
-
-**Description**: Add transactional behavior to a class method, ensuring that the method executes within a transaction context.
+The `@transactional` decorator ensures that a method is executed within a transaction.
 
 ```typescript
 import { transactional } from '@decaf-ts/transactional-decorators';
 
-class UserService {
+class MyService {
   @transactional()
-  async createUser(userData: any): Promise<any> {
-    // This method will be executed within a transaction
-    // If an error occurs, the transaction will be released with the error
-    const user = await this.userRepository.save(userData);
-    return user;
-  }
-
-  @transactional(['custom', 'metadata'])
-  async updateUser(userId: string, userData: any): Promise<any> {
-    // You can pass custom metadata to the transaction
-    const user = await this.userRepository.findById(userId);
-    Object.assign(user, userData);
-    return await this.userRepository.save(user);
+  async myTransactionalMethod() {
+    // This method will be executed within a transaction.
   }
 }
-
-// Using the transactional method
-const userService = new UserService();
-const newUser = await userService.createUser({ name: 'John Doe' });
 ```
 
-#### Using the Transaction Class Directly
+## Locks
 
-For more control over the transaction lifecycle, you can use the Transaction class directly.
+The library provides different lock implementations to control concurrency.
 
-**Description**: Create and manage transactions manually for complex scenarios or when you need fine-grained control.
+### SynchronousLock
+
+The `SynchronousLock` allows only one transaction to execute at a time. This is the default lock.
+
+```typescript
+import { Transaction, SynchronousLock } from '@decaf-ts/transactional-decorators';
+
+Transaction.setLock(new SynchronousLock());
+```
+
+### MultiLock
+
+The `MultiLock` allows multiple transactions to execute concurrently, with a configurable limit.
+
+```typescript
+import { Transaction, MultiLock } from '@decaf-ts/transactional-decorators';
+
+// Allow up to 5 transactions to execute concurrently
+Transaction.setLock(new MultiLock(5));
+```
+
+## Manual Transaction Management
+
+You can also manage transactions manually using the `Transaction` class.
 
 ```typescript
 import { Transaction } from '@decaf-ts/transactional-decorators';
 
-// Creating a transaction
-const transaction = new Transaction(
-  'UserService', // Source
-  'createUser',  // Method name
+const myTransaction = new Transaction(
+  'MyManualTransaction',
+  'myAction',
   async () => {
     // Transaction logic here
-    const user = await userRepository.save({ name: 'John Doe' });
-    return user;
   }
 );
 
-// Submitting the transaction for execution
-await Transaction.submit(transaction);
-
-// Using the Transaction.push method for callback-style APIs
-Transaction.push(
-  userService, // The object instance
-  userService.createUserWithCallback, // The method to call
-  { name: 'John Doe' }, // Arguments
-  (err, user) => {
-    if (err) {
-      console.error('Error creating user:', err);
-      return;
-    }
-    console.log('User created:', user);
-  }
-);
+Transaction.submit(myTransaction);
 ```
-
-#### Handling Super Calls in Transactional Methods
-
-When extending a class with transactional methods, you can use the `transactionalSuperCall` utility to ensure transaction continuity.
-
-**Description**: Maintain transaction context when calling a superclass method that is also transactional.
-
-```typescript
-import { transactional, transactionalSuperCall } from '@decaf-ts/transactional-decorators';
-
-class BaseRepository {
-  @transactional()
-  async save(entity: any): Promise<any> {
-    // Base save implementation
-    return entity;
-  }
-}
-
-class UserRepository extends BaseRepository {
-  @transactional()
-  async save(user: any): Promise<any> {
-    // Pre-processing
-    user.updatedAt = new Date();
-
-    // Call the super method with transaction context
-    const result = await transactionalSuperCall(super.save.bind(this), user);
-
-    // Post-processing
-    console.log('User saved:', result);
-    return result;
-  }
-}
-```
-
-#### Customizing the Transaction Lock
-
-You can implement your own TransactionLock to customize how transactions are processed.
-
-**Description**: Create a custom transaction lock implementation for specialized concurrency control.
-
-```typescript
-import { TransactionLock, Transaction } from '@decaf-ts/transactional-decorators';
-
-// Custom transaction lock that logs transactions
-class LoggingTransactionLock implements TransactionLock {
-  currentTransaction?: Transaction;
-  private pendingTransactions: Transaction[] = [];
-
-  submit(transaction: Transaction): void {
-    console.log(`Submitting transaction: ${transaction.toString()}`);
-
-    if (this.currentTransaction) {
-      this.pendingTransactions.push(transaction);
-      console.log(`Transaction queued. Queue length: ${this.pendingTransactions.length}`);
-    } else {
-      this.currentTransaction = transaction;
-      console.log(`Executing transaction immediately`);
-      transaction.fire();
-    }
-  }
-
-  async release(err?: Error): Promise<void> {
-    if (err) {
-      console.error(`Transaction error: ${err.message}`);
-    } else {
-      console.log(`Transaction completed successfully`);
-    }
-
-    this.currentTransaction = undefined;
-
-    if (this.pendingTransactions.length > 0) {
-      const nextTransaction = this.pendingTransactions.shift()!;
-      console.log(`Processing next transaction: ${nextTransaction.toString()}`);
-      this.currentTransaction = nextTransaction;
-      nextTransaction.fire();
-    }
-
-    return Promise.resolve();
-  }
-}
-
-// Set the custom lock as the default
-Transaction.setLock(new LoggingTransactionLock());
-```
-
-#### Using the Lock Class
-
-The Lock class provides a basic locking mechanism that you can use independently of the transaction system.
-
-**Description**: Use the Lock class for simple concurrency control in non-transactional contexts.
-
-```typescript
-import { Lock } from '@decaf-ts/transactional-decorators';
-
-// Create a lock for a shared resource
-const resourceLock = new Lock();
-
-// Execute a function with exclusive access to the resource
-async function accessSharedResource() {
-  const result = await resourceLock.execute(async () => {
-    // This code will run with exclusive access to the resource
-    const data = await fetchDataFromDatabase();
-    const processedData = processData(data);
-    await saveDataToDatabase(processedData);
-    return processedData;
-  });
-
-  return result;
-}
-
-// Alternatively, you can manually acquire and release the lock
-async function manualLockHandling() {
-  await resourceLock.acquire();
-  try {
-    // Critical section with exclusive access
-    const data = await fetchDataFromDatabase();
-    const processedData = processData(data);
-    await saveDataToDatabase(processedData);
-    return processedData;
-  } finally {
-    // Always release the lock, even if an error occurs
-    resourceLock.release();
-  }
-}
-```
-
-
-## Coding Principles
-
-- group similar functionality in folders (analog to namespaces but without any namespace declaration)
-- one class per file;
-- one interface per file (unless interface is just used as a type);
-- group types as other interfaces in a types.ts file per folder;
-- group constants or enums in a constants.ts file per folder;
-- group decorators in a decorators.ts file per folder;
-- always import from the specific file, never from a folder or index file (exceptions for dependencies on other packages);
-- prefer the usage of established design patters where applicable:
-  - Singleton (can be an anti-pattern. use with care);
-  - factory;
-  - observer;
-  - strategy;
-  - builder;
-  - etc;
-
-## Release Documentation Hooks
-Stay aligned with the automated release pipeline by reviewing [Release Notes](./workdocs/reports/RELEASE_NOTES.md) and [Dependencies](./workdocs/reports/DEPENDENCIES.md) after trying these recipes (updated on 2025-11-26).
 
 
 ### Related
