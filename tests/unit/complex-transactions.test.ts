@@ -5,7 +5,7 @@ import { SynchronousLock, Transaction } from "../../src";
 import {
   ConsumerRunner,
   defaultComparer,
-} from "../../node_modules/@decaf-ts/utils/lib/tests/Consumer.cjs";
+} from "../../node_modules/@decaf-ts/utils/lib/cjs/tests/Consumer.cjs";
 import { Logging, LogLevel } from "@decaf-ts/logging";
 
 const DEFAULT_TIMEOUT = 15000;

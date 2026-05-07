@@ -4,10 +4,14 @@
   "description": "Locking and transactions",
   "type": "module",
   "exports": {
-    "require": "./lib/index.cjs",
-    "import": "./lib/esm/index.js"
+    ".": {
+      "require": "./lib/cjs/index.cjs",
+      "import": "./lib/esm/index.js",
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/esm/index.js"
+    }
   },
-  "types": "lib/index.d.ts",
+  "types": "./lib/types/index.d.ts",
   "scripts": {
     "do-install": "NPM_TOKEN=$(cat .npmtoken) npm install",
     "update-dependencies": "PREFIX=\"decaf-ts\"; npm ls | grep \"$PREFIX\" | awk -F/ '{print $NF}' | sed 's/@.*//' | xargs -I package npm update @\"$PREFIX\"/package",
@@ -83,5 +87,8 @@
     "@decaf-ts/decoration": "latest",
     "@decaf-ts/decorator-validation": "latest",
     "@decaf-ts/injectable-decorators": "latest"
-  }
+  },
+  "main": "./lib/cjs/index.cjs",
+  "module": "./lib/esm/index.js",
+  "sideEffects": false
 }
