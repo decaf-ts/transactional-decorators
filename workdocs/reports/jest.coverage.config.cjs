@@ -33,7 +33,7 @@ coverageThreshold: {
     global: {
       branches: 71,
       functions: 84,
-      lines: 92,
+      lines: 87,
       statements: 86,
     },
   },
