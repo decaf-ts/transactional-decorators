@@ -29,14 +29,14 @@ const config = {
       },
     ],
   ],
-  // coverageThreshold: {
-  //   global: {
-  //     branches: 70,
-  //     functions: 100,
-  //     lines: 80,
-  //     statements: 90,
-  //   },
-  // },
+coverageThreshold: {
+    global: {
+      branches: 71,
+      functions: 84,
+      lines: 87,
+      statements: 86,
+    },
+  },
 };
 
 module.exports = config;
