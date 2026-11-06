@@ -1,3 +1,4 @@
+import { it } from "@decaf-ts/for-testing";
 import { MultiLock } from "../../src/locks/MultiLock";
 
 describe("MultiLock", () => {

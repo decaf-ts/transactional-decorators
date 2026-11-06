@@ -1,11 +1,8 @@
+import { ConsumerRunner, defaultComparer, it } from "@decaf-ts/for-testing";
 import { TestModelAsync } from "./TestModel";
 import { Injectables } from "@decaf-ts/injectable-decorators";
 import { GenericCaller, GenericCaller2, GenericCaller3 } from "./repositories";
 import { SynchronousLock, Transaction } from "../../src";
-import {
-  ConsumerRunner,
-  defaultComparer,
-} from "../../node_modules/@decaf-ts/utils/lib/cjs/tests/Consumer.cjs";
 import { Logging, LogLevel } from "@decaf-ts/logging";
 
 const DEFAULT_TIMEOUT = 15000;
